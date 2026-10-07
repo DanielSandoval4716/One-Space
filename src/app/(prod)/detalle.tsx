@@ -11,9 +11,7 @@ import { useTheme } from '@/theme';
 export default function DetalleProductoScreen() {
   const router = useRouter();
   const colors = useTheme();
-
   const { id } = useLocalSearchParams();
-
   const producto = productosPrueba.find(
     (item) => item.id === Number(id)
   );
@@ -32,7 +30,6 @@ export default function DetalleProductoScreen() {
       </ThemedView>
     );
   }
-
   return (
     <ThemedView style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -65,7 +62,7 @@ export default function DetalleProductoScreen() {
             }}
           >
             <ThemedText type="suave">
-              Fotografía del producto
+            "Imagen del producto, por el momento no disponible"//TODO
             </ThemedText>
           </ThemedCard>
 
@@ -78,13 +75,9 @@ export default function DetalleProductoScreen() {
             >
               {producto.marca} {producto.modelo}
             </ThemedText>
-
             <Dato titulo="Tipo" valor={producto.tipo} />
-
             <Dato titulo="Marca" valor={producto.marca} />
-
             <Dato titulo="Modelo" valor={producto.modelo} />
-
             <Dato
               titulo="Identificador"
               valor={`PROD-${producto.id}`}
