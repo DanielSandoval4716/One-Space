@@ -1,17 +1,11 @@
-import { useEffect, useState } from 'react';
-import { ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedCard } from '@/components/ThemedCard';
+import { cerrarSesion, obtenerSesion } from '@/auth';
 import { ThemedButton } from '@/components/ThemedButton';
-import { obtenerSesion, cerrarSesion } from '@/auth';
-
-const areas = [
-  'Productos', 'Inventario', 'Bodegas', 'Movimientos', 'Conteos',
-  'Proveedores', 'Personas', 'Reportes', 'Auditoría', 'Configuración',
-];
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -32,13 +26,9 @@ export default function Dashboard() {
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 24, gap: 12 }}>
           <ThemedText type="titulo">Dashboard</ThemedText>
-
-          {areas.map((nombre) => (
-            <ThemedCard key={nombre}>
-              <ThemedText>{nombre}</ThemedText>
-            </ThemedCard>
-          ))}
-
+          <ThemedButton titulo="Productos" onPress={()=>{
+            router.push('/productos')
+          }} />
           <ThemedButton titulo="Cerrar sesión" onPress={salir} />
         </ScrollView>
       </SafeAreaView>
