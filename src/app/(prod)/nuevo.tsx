@@ -27,7 +27,7 @@ export default function NuevoProductoScreen() {
   function guardarProducto() {
     Alert.alert(
       'Producto',
-      'Producto guardado de forma provisional.'
+      'Producto guardado de forma provisional.'//TODO
     );
   }
 
@@ -61,31 +61,24 @@ export default function NuevoProductoScreen() {
 
           <ThemedCard style={{ gap: 14 }}>
             <ThemedText>Tipo de producto</ThemedText>
-
             <ThemedInput
               placeholder="Ej. Mouse"
               value={tipo}
               onChangeText={setTipo}
             />
-
             <ThemedText>Marca</ThemedText>
-
             <ThemedInput
               placeholder="Ej. Logitech"
               value={marca}
               onChangeText={setMarca}
             />
-
             <ThemedText>Modelo</ThemedText>
-
             <ThemedInput
               placeholder="Ej. G502"
               value={modelo}
               onChangeText={setModelo}
             />
-
             <ThemedText>Descripción</ThemedText>
-
             <ThemedInput
               placeholder="Descripción del producto"
               value={descripcion}
@@ -96,16 +89,13 @@ export default function NuevoProductoScreen() {
                 textAlignVertical: 'top',
               }}
             />
-
-            <ThemedText>Unidad de medida</ThemedText>
-
+            <ThemedText>Unidad de medida (opcional)</ThemedText>
             <ThemedInput
               placeholder="Ej. Unidad"
               value={unidad}
               onChangeText={setUnidad}
             />
           </ThemedCard>
-
           <ThemedCard
             style={{
               alignItems: 'center',
@@ -119,17 +109,15 @@ export default function NuevoProductoScreen() {
             >
               Fotografía del producto
             </ThemedText>
-
             <ThemedText type="suave">
               No se ha seleccionado una fotografía.
             </ThemedText>
-
             <TouchableOpacity
               onPress={() =>
                 Alert.alert(
                   'Fotografía',
                   'Esta función se implementará posteriormente.'
-                )
+                ) //////TODO
               }
               style={{
                 borderColor: colors.primario,
@@ -148,7 +136,6 @@ export default function NuevoProductoScreen() {
               </ThemedText>
             </TouchableOpacity>
           </ThemedCard>
-
           <ThemedButton
             titulo="Guardar producto"
             onPress={guardarProducto}

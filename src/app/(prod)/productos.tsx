@@ -51,7 +51,7 @@ export default function ProductosScreen() {
 
           <ThemedButton
             titulo="+ Nuevo producto"
-            onPress={() => router.push('/productos/nuevo')}
+            onPress={() => router.push('/nuevo')}
           />
 
           <ThemedText
@@ -69,7 +69,7 @@ export default function ProductosScreen() {
               producto={producto}
               onPress={() =>
                 router.push({
-                  pathname: '/productos/detalle',
+                  pathname: '/detalle',
                   params: { id: producto.id },
                 })
               }
