@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedCard } from '@/components/ThemedCard';
+import { cerrarSesion, obtenerSesion } from '@/auth';
 import { ThemedButton } from '@/components/ThemedButton';
-import { obtenerSesion, cerrarSesion } from '@/auth';
+import { ThemedCard } from '@/components/ThemedCard';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const areas = [
   'Productos', 'Inventario', 'Bodegas', 'Movimientos', 'Conteos',
@@ -35,7 +35,15 @@ export default function Dashboard() {
 
           {areas.map((nombre) => (
             <ThemedCard key={nombre}>
-              <ThemedText>{nombre}</ThemedText>
+              <ThemedText
+                onPress={() => {
+                  if (nombre === 'Productos') {
+                    router.push('/productos');
+                  }
+                }}
+              >
+                {nombre}
+              </ThemedText>
             </ThemedCard>
           ))}
 
