@@ -30,6 +30,7 @@ export default function Dashboard() {
             router.push('/productos')
           }} />
           <ThemedButton titulo="Directorio" onPress={() => router.push('/directorio')} />
+          <ThemedButton titulo="bodegas" onPress={() => router.push('/bodegas')} />
           <ThemedButton titulo="Cerrar sesión" onPress={salir} />
         </ScrollView>
       </SafeAreaView>
