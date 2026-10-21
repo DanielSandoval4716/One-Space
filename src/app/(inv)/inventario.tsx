@@ -12,7 +12,7 @@ import { useTheme } from '@/theme';
 
 // Para agregar una sección nueva basta con ponerle su "ruta".
 const secciones: { titulo: string; descripcion: string; ruta?: Href; permisos?: string[] }[] = [
-  { titulo: 'Existencias', descripcion: 'Consultar cantidades por producto y ubicación.' }, // TODO: pantalla Existencias
+  { titulo: 'Existencias', descripcion: 'Consultar cantidades por producto y ubicación.', ruta: '/existencias' as Href },
   { titulo: 'Entradas', descripcion: 'Registrar productos que ingresan.', permisos: ['inventario.entrada'] }, // TODO: pantalla Entradas
   { titulo: 'Salidas', descripcion: 'Registrar unidades que salen.', permisos: ['inventario.salida'] }, // TODO: pantalla Salidas
   { titulo: 'Transferencias', descripcion: 'Mover existencias entre ubicaciones.', permisos: ['inventario.transferencia'] }, // TODO: pantalla Transferencias
