@@ -1,21 +1,21 @@
+import { cerrarSesion, obtenerSesion } from '@/auth';
+import { ThemedButton } from '@/components/ThemedButton';
+import { ThemedCard } from '@/components/ThemedCard';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Resumen, obtenerResumen } from '@/dashboard';
+import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
+import { useTheme } from '@/theme';
+import { Href, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
-import { Href, useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedCard } from '@/components/ThemedCard';
-import { ThemedButton } from '@/components/ThemedButton';
-import { cerrarSesion, obtenerSesion } from '@/auth';
-import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
-import { Resumen, obtenerResumen } from '@/dashboard';
-import { useTheme } from '@/theme';
 
 const modulos: { titulo: string; ruta?: Href; permisos?: string[] }[] = [
   { titulo: 'Productos', ruta: '/productos' },
-  { titulo: 'Inventario' }, // TODO: pantalla Inventario (existencias, entradas, salidas, transferencias, ajustes, reservas)
+  { titulo: 'Inventario', ruta: '/inventario' }, // TODO: pantalla Inventario (existencias, entradas, salidas, transferencias, ajustes, reservas)
   { titulo: 'Bodegas', ruta: '/bodegas' },
-  { titulo: 'Movimientos' }, // TODO: pantalla Movimientos de inventario (historial y detalle)
+  { titulo: 'Movimientos', ruta: '/movimientos' }, // TODO: pantalla Movimientos de inventario (historial y detalle)
   { titulo: 'Conteos', permisos: ['conteos.realizar'] }, // TODO: pantalla Conteos (hace falta crear sus tablas)
   { titulo: 'Directorio', ruta: '/directorio', permisos: ['proveedores.gestionar', 'personas.gestionar'] },
   { titulo: 'Documentos' }, // TODO: pantalla Documentos (archivos y evidencias)
