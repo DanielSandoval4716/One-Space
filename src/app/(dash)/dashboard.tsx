@@ -13,9 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const modulos: { titulo: string; ruta?: Href; permisos?: string[] }[] = [
   { titulo: 'Productos', ruta: '/productos' },
-  { titulo: 'Inventario', ruta: '/inventario' }, // TODO: pantalla Inventario (existencias, entradas, salidas, transferencias, ajustes, reservas)
+  { titulo: 'Inventario', ruta: '/inventario' },
   { titulo: 'Bodegas', ruta: '/bodegas' },
-  { titulo: 'Movimientos', ruta: '/movimientos' }, // TODO: pantalla Movimientos de inventario (historial y detalle)
+  { titulo: 'Movimientos', ruta: '/movimientos' },
   { titulo: 'Conteos', permisos: ['conteos.realizar'] }, // TODO: pantalla Conteos (hace falta crear sus tablas)
   { titulo: 'Directorio', ruta: '/directorio', permisos: ['proveedores.gestionar', 'personas.gestionar'] },
   { titulo: 'Documentos' }, // TODO: pantalla Documentos (archivos y evidencias)
