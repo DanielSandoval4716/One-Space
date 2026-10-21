@@ -12,6 +12,59 @@ export function esTipoOperacion(valor: unknown): valor is TipoOperacion {
   return valor === "entrada" || valor === "salida" || valor === "transferencia";
 }
 
+// Qué pide y cómo se llama cada tipo de operación.
+export type ConfigOperacion = {
+  nombre: string; // para el aviso al terminar ("Entrada registrada.")
+  titulo: string;
+  subtitulo: string;
+  permiso: string; // permiso que necesita el usuario (roles.permisos)
+  boton: string;
+  exito: string;
+  etiquetaOrigen: string | null; // null = esta operación no usa ubicación de origen
+  etiquetaDestino: string | null; // null = esta operación no usa ubicación de destino
+  usaProveedor: boolean;
+  usaPersona: boolean;
+};
+
+export const CONFIG_OPERACION: Record<TipoOperacion, ConfigOperacion> = {
+  entrada: {
+    nombre: "Entrada",
+    titulo: "Nueva entrada",
+    subtitulo: "Registra productos que ingresan al inventario.",
+    permiso: "inventario.entrada",
+    boton: "Confirmar entrada",
+    exito: "Entrada registrada.",
+    etiquetaOrigen: null,
+    etiquetaDestino: "Ubicación donde ingresa",
+    usaProveedor: true,
+    usaPersona: false,
+  },
+  salida: {
+    nombre: "Salida",
+    titulo: "Nueva salida",
+    subtitulo: "Registra unidades que salen de una ubicación.",
+    permiso: "inventario.salida",
+    boton: "Confirmar salida",
+    exito: "Salida registrada.",
+    etiquetaOrigen: "Ubicación de donde sale",
+    etiquetaDestino: null,
+    usaProveedor: false,
+    usaPersona: true,
+  },
+  transferencia: {
+    nombre: "Transferencia",
+    titulo: "Nueva transferencia",
+    subtitulo: "Mueve existencias de una ubicación a otra.",
+    permiso: "inventario.transferencia",
+    boton: "Confirmar transferencia",
+    exito: "Transferencia registrada.",
+    etiquetaOrigen: "Ubicación de origen",
+    etiquetaDestino: "Ubicación de destino",
+    usaProveedor: false,
+    usaPersona: false,
+  },
+};
+
 export type DatosMovimiento = {
   productoId: string;
   cantidad: number;

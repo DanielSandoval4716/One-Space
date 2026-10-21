@@ -1,15 +1,22 @@
+// Pantalla para registrar una entrada, una salida o una transferencia de inventario.
+// Las tres comparten esta pantalla: el tipo llega en la ruta (/operacion?tipo=entrada) y
+// lo que cambia entre ellas (qué campos se piden, textos, permisos) está en CONFIG_OPERACION.
+//
+// Pasos: 1) cargar listas  2) el usuario llena el formulario  3) validar  4) guardar.
+
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { obtenerSesion } from '@/auth';
 import { ThemedButton } from '@/components/ThemedButton';
-import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { CambioExistencia } from '@/components/inventario/CambioExistencia';
 import { Opciones } from '@/components/inventario/Opciones';
+import { Seccion } from '@/components/inventario/Seccion';
 import { SelectorProducto } from '@/components/inventario/SelectorProducto';
 import {
   MotivoOpcion,
@@ -26,6 +33,7 @@ import {
   obtenerUbicacionesOpcion,
 } from '@/opcionesInventario';
 import {
+  CONFIG_OPERACION,
   ProveedorOpcion,
   TipoOperacion,
   esTipoOperacion,
@@ -36,80 +44,24 @@ import {
 import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
 import { useTheme } from '@/theme';
 
-// Entradas, salidas y transferencias comparten esta misma pantalla.
-const CONFIG: Record<
-  TipoOperacion,
-  {
-    titulo: string;
-    subtitulo: string;
-    permiso: string;
-    boton: string;
-    exito: string;
-    etiquetaOrigen: string | null;
-    etiquetaDestino: string | null;
-    usaProveedor: boolean;
-    usaPersona: boolean;
-  }
-> = {
-  entrada: {
-    titulo: 'Nueva entrada',
-    subtitulo: 'Registra productos que ingresan al inventario.',
-    permiso: 'inventario.entrada',
-    boton: 'Confirmar entrada',
-    exito: 'Entrada registrada.',
-    etiquetaOrigen: null,
-    etiquetaDestino: 'Ubicación donde ingresa',
-    usaProveedor: true,
-    usaPersona: false,
-  },
-  salida: {
-    titulo: 'Nueva salida',
-    subtitulo: 'Registra unidades que salen de una ubicación.',
-    permiso: 'inventario.salida',
-    boton: 'Confirmar salida',
-    exito: 'Salida registrada.',
-    etiquetaOrigen: 'Ubicación de donde sale',
-    etiquetaDestino: null,
-    usaProveedor: false,
-    usaPersona: true,
-  },
-  transferencia: {
-    titulo: 'Nueva transferencia',
-    subtitulo: 'Mueve existencias de una ubicación a otra.',
-    permiso: 'inventario.transferencia',
-    boton: 'Confirmar transferencia',
-    exito: 'Transferencia registrada.',
-    etiquetaOrigen: 'Ubicación de origen',
-    etiquetaDestino: 'Ubicación de destino',
-    usaProveedor: false,
-    usaPersona: false,
-  },
-};
-
+// "Sin proveedor" es una opción más de la lista; se guarda como "ningún proveedor".
 const SIN_PROVEEDOR = 0;
 
 export default function Operacion() {
-  const router = useRouter();
-  const colors = useTheme();
-  const params = useLocalSearchParams<{ tipo?: string }>();
+  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
 
-  if (!esTipoOperacion(params.tipo)) {
-    return (
-      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <ThemedText type="error">Operación no válida.</ThemedText>
-      </ThemedView>
-    );
-  }
-
-  return <Formulario tipo={params.tipo} />;
+  if (!esTipoOperacion(tipo)) return <MensajeCentrado texto="Operación no válida." />;
+  return <FormularioOperacion tipo={tipo} />;
 }
 
-function Formulario({ tipo }: { tipo: TipoOperacion }) {
+function FormularioOperacion({ tipo }: { tipo: TipoOperacion }) {
   const router = useRouter();
   const colors = useTheme();
-  const cfg = CONFIG[tipo];
+  const cfg = CONFIG_OPERACION[tipo];
+  const usaOrigen = cfg.etiquetaOrigen !== null;
+  const usaDestino = cfg.etiquetaDestino !== null;
 
-  // Datos que vienen de la base de datos
+  // --- Datos que vienen de la base de datos ---
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [productos, setProductos] = useState<ProductoOpcion[]>([]);
   const [ubicaciones, setUbicaciones] = useState<UbicacionOpcion[]>([]);
@@ -119,20 +71,24 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
   const [regla, setRegla] = useState<ReglaOperacion>({ evidencia: 'opcional', requiere_autorizacion: false });
   const [cargando, setCargando] = useState(true);
 
-  // Lo que el usuario va llenando
+  // --- Lo que el usuario va llenando ---
   const [producto, setProducto] = useState<ProductoOpcion | null>(null);
   const [origenId, setOrigenId] = useState<number | null>(null);
   const [destinoId, setDestinoId] = useState<number | null>(null);
-  const [existOrigen, setExistOrigen] = useState<number | null>(null);
-  const [existDestino, setExistDestino] = useState<number | null>(null);
   const [cantidadTexto, setCantidadTexto] = useState('');
   const [motivoId, setMotivoId] = useState<number | null>(null);
   const [proveedorId, setProveedorId] = useState<number | null>(null);
   const [personaId, setPersonaId] = useState<number | null>(null);
   const [observaciones, setObservaciones] = useState('');
+
+  // --- Existencia registrada hoy en el origen y el destino elegidos ---
+  const [existOrigen, setExistOrigen] = useState<number | null>(null);
+  const [existDestino, setExistDestino] = useState<number | null>(null);
+
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  // Paso 1: al abrir la pantalla se cargan las listas que necesita este tipo de operación.
   useEffect(() => {
     async function cargar() {
       const session = await obtenerSesion();
@@ -162,18 +118,18 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
     cargar();
   }, []);
 
-  // Lee la existencia registrada en origen y destino. Si el usuario cambia algo
-  // mientras se lee, se ignora la respuesta anterior.
-  const pedido = useRef(0);
+  // Paso 2: cada vez que cambia el producto o una ubicación, se lee la existencia registrada.
+  // Si el usuario cambia otra cosa mientras se lee, se descarta la respuesta vieja.
+  const lecturaActual = useRef(0);
   async function leerExistencias(p: ProductoOpcion | null, origen: number | null, destino: number | null) {
-    const mio = ++pedido.current;
-    const [eo, ed] = await Promise.all([
-      p && origen !== null && cfg.etiquetaOrigen ? obtenerExistencia(p.id, origen) : Promise.resolve(null),
-      p && destino !== null && cfg.etiquetaDestino ? obtenerExistencia(p.id, destino) : Promise.resolve(null),
+    const numeroDeLectura = ++lecturaActual.current;
+    const [enOrigen, enDestino] = await Promise.all([
+      p && usaOrigen && origen !== null ? obtenerExistencia(p.id, origen) : Promise.resolve(null),
+      p && usaDestino && destino !== null ? obtenerExistencia(p.id, destino) : Promise.resolve(null),
     ]);
-    if (mio !== pedido.current) return;
-    setExistOrigen(eo);
-    setExistDestino(ed);
+    if (numeroDeLectura !== lecturaActual.current) return;
+    setExistOrigen(enOrigen);
+    setExistDestino(enDestino);
   }
 
   function elegirProducto(p: ProductoOpcion | null) {
@@ -195,25 +151,36 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
   const unidad = producto?.unidad ?? '';
   const opcionesUbicacion = ubicaciones.map((u) => ({ valor: u.id, titulo: `${u.bodega} › ${u.nombre}` }));
 
-  async function confirmar() {
+  // Paso 3: devuelve el primer problema que impide guardar, o null si todo está bien.
+  function buscarProblema(): string | null {
     const problema = validarOperacion(tipo, {
       productoId: producto?.id ?? null,
       cantidad,
-      origenId: cfg.etiquetaOrigen ? origenId : null,
-      destinoId: cfg.etiquetaDestino ? destinoId : null,
+      origenId: usaOrigen ? origenId : null,
+      destinoId: usaDestino ? destinoId : null,
       motivoId,
       personaId: cfg.usaPersona ? personaId : null,
       existenciaOrigen: existOrigen,
     });
-    if (problema) return setError(problema);
+    if (problema) return problema;
 
     // TODO: cuando exista el módulo de Documentos, adjuntar la evidencia en lugar de bloquear.
     if (regla.evidencia === 'obligatoria') {
-      return setError('Esta operación requiere evidencia y todavía no se puede adjuntar (falta el módulo de Documentos).');
+      return 'Esta operación requiere evidencia y todavía no se puede adjuntar (falta el módulo de Documentos).';
     }
     // TODO: solicitudes de autorización (hace falta su tabla en la base de datos).
     if (regla.requiere_autorizacion) {
-      return setError('Esta operación requiere autorización y todavía no está disponible.');
+      return 'Esta operación requiere autorización y todavía no está disponible.';
+    }
+    return null;
+  }
+
+  // Paso 4: guardar con la función registrar_movimiento de Supabase.
+  async function confirmar() {
+    const problema = buscarProblema();
+    if (problema) {
+      setError(problema);
+      return;
     }
 
     setError('');
@@ -221,8 +188,8 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
     const resultado = await registrarMovimiento({
       productoId: producto!.id,
       cantidad: cantidad!,
-      origenId: cfg.etiquetaOrigen ? origenId : null,
-      destinoId: cfg.etiquetaDestino ? destinoId : null,
+      origenId: usaOrigen ? origenId : null,
+      destinoId: usaDestino ? destinoId : null,
       motivoId,
       proveedorId: cfg.usaProveedor ? proveedorId || null : null,
       personaId: cfg.usaPersona ? personaId : null,
@@ -234,17 +201,11 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
       setError(`No se pudo registrar: ${resultado.error ?? 'revisa que tengas permiso.'}`);
       return;
     }
-    Alert.alert(cfg.titulo.replace('Nueva ', '').replace('Nuevo ', ''), cfg.exito, [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    Alert.alert(cfg.nombre, cfg.exito, [{ text: 'OK', onPress: () => router.back() }]);
   }
 
   if (!cargando && perfil && !puedeVer(perfil, [cfg.permiso])) {
-    return (
-      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <ThemedText type="error">No tienes permiso para esta operación.</ThemedText>
-      </ThemedView>
-    );
+    return <MensajeCentrado texto="No tienes permiso para esta operación." />;
   }
 
   return (
@@ -262,14 +223,12 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
 
           {!cargando && (
             <>
-              <ThemedCard style={{ gap: 12 }}>
-                <ThemedText style={{ fontWeight: 'bold' }}>Producto</ThemedText>
+              <Seccion titulo="Producto">
                 <SelectorProducto productos={productos} seleccionado={producto} onSelect={elegirProducto} />
-              </ThemedCard>
+              </Seccion>
 
               {cfg.etiquetaOrigen && (
-                <ThemedCard style={{ gap: 12 }}>
-                  <ThemedText style={{ fontWeight: 'bold' }}>{cfg.etiquetaOrigen}</ThemedText>
+                <Seccion titulo={cfg.etiquetaOrigen}>
                   {ubicaciones.length === 0 && <ThemedText type="suave">No hay ubicaciones registradas.</ThemedText>}
                   <Opciones opciones={opcionesUbicacion} valor={origenId} onChange={elegirOrigen} />
                   {existOrigen !== null && (
@@ -277,12 +236,11 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
                       Disponible en esa ubicación: {existOrigen} {unidad}
                     </ThemedText>
                   )}
-                </ThemedCard>
+                </Seccion>
               )}
 
               {cfg.etiquetaDestino && (
-                <ThemedCard style={{ gap: 12 }}>
-                  <ThemedText style={{ fontWeight: 'bold' }}>{cfg.etiquetaDestino}</ThemedText>
+                <Seccion titulo={cfg.etiquetaDestino}>
                   {ubicaciones.length === 0 && <ThemedText type="suave">No hay ubicaciones registradas.</ThemedText>}
                   <Opciones opciones={opcionesUbicacion} valor={destinoId} onChange={elegirDestino} />
                   {existDestino !== null && (
@@ -290,45 +248,32 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
                       Existencia actual en esa ubicación: {existDestino} {unidad}
                     </ThemedText>
                   )}
-                </ThemedCard>
+                </Seccion>
               )}
 
-              <ThemedCard style={{ gap: 12 }}>
-                <ThemedText style={{ fontWeight: 'bold' }}>Cantidad</ThemedText>
+              <Seccion titulo="Cantidad">
                 <ThemedInput
                   placeholder={`Cantidad${unidad ? ` (${unidad})` : ''}`}
                   value={cantidadTexto}
                   onChangeText={setCantidadTexto}
                   keyboardType="decimal-pad"
                 />
-              </ThemedCard>
+              </Seccion>
 
-              {/* Cómo quedan las existencias */}
+              {/* Vista previa: cómo quedarán las existencias si se confirma */}
               {cantidad !== null && cantidad > 0 && (existOrigen !== null || existDestino !== null) && (
-                <ThemedCard style={{ gap: 6 }}>
-                  <ThemedText style={{ fontWeight: 'bold' }}>Así quedarán las existencias</ThemedText>
+                <Seccion titulo="Así quedarán las existencias">
                   {existOrigen !== null && (
-                    <Cambio
-                      titulo="Origen"
-                      antes={existOrigen}
-                      despues={existOrigen - cantidad}
-                      unidad={unidad}
-                    />
+                    <CambioExistencia titulo="Origen" antes={existOrigen} despues={existOrigen - cantidad} unidad={unidad} />
                   )}
                   {existDestino !== null && (
-                    <Cambio
-                      titulo="Destino"
-                      antes={existDestino}
-                      despues={existDestino + cantidad}
-                      unidad={unidad}
-                    />
+                    <CambioExistencia titulo="Destino" antes={existDestino} despues={existDestino + cantidad} unidad={unidad} />
                   )}
-                </ThemedCard>
+                </Seccion>
               )}
 
               {cfg.usaProveedor && (
-                <ThemedCard style={{ gap: 12 }}>
-                  <ThemedText style={{ fontWeight: 'bold' }}>Proveedor (opcional)</ThemedText>
+                <Seccion titulo="Proveedor (opcional)">
                   <Opciones
                     opciones={[
                       { valor: SIN_PROVEEDOR, titulo: 'Sin proveedor' },
@@ -337,23 +282,21 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
                     valor={proveedorId ?? SIN_PROVEEDOR}
                     onChange={setProveedorId}
                   />
-                </ThemedCard>
+                </Seccion>
               )}
 
               {cfg.usaPersona && (
-                <ThemedCard style={{ gap: 12 }}>
-                  <ThemedText style={{ fontWeight: 'bold' }}>Responsable o destinatario</ThemedText>
+                <Seccion titulo="Responsable o destinatario">
                   {personas.length === 0 && <ThemedText type="suave">No hay personas registradas.</ThemedText>}
                   <Opciones
                     opciones={personas.map((p) => ({ valor: p.id, titulo: p.nombre }))}
                     valor={personaId}
                     onChange={setPersonaId}
                   />
-                </ThemedCard>
+                </Seccion>
               )}
 
-              <ThemedCard style={{ gap: 12 }}>
-                <ThemedText style={{ fontWeight: 'bold' }}>Motivo</ThemedText>
+              <Seccion titulo="Motivo">
                 {motivos.length === 0 && <ThemedText type="suave">No hay motivos registrados.</ThemedText>}
                 <Opciones
                   opciones={motivos.map((m) => ({ valor: m.id, titulo: m.nombre }))}
@@ -367,7 +310,7 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
                   multiline
                   style={{ minHeight: 70, textAlignVertical: 'top' }}
                 />
-              </ThemedCard>
+              </Seccion>
 
               {regla.evidencia === 'obligatoria' && (
                 <ThemedText style={{ color: colors.aviso }}>
@@ -375,9 +318,7 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
                 </ThemedText>
               )}
               {regla.requiere_autorizacion && (
-                <ThemedText style={{ color: colors.aviso }}>
-                  Este tipo de operación requiere autorización.
-                </ThemedText>
+                <ThemedText style={{ color: colors.aviso }}>Este tipo de operación requiere autorización.</ThemedText>
               )}
 
               {error !== '' && <ThemedText type="error">{error}</ThemedText>}
@@ -391,14 +332,10 @@ function Formulario({ tipo }: { tipo: TipoOperacion }) {
   );
 }
 
-function Cambio({ titulo, antes, despues, unidad }: { titulo: string; antes: number; despues: number; unidad: string }) {
-  const colors = useTheme();
+function MensajeCentrado({ texto }: { texto: string }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-      <ThemedText type="suave">{titulo}</ThemedText>
-      <ThemedText style={{ fontWeight: 'bold', color: despues < 0 ? colors.error : colors.texto }}>
-        {antes} → {despues} {unidad}
-      </ThemedText>
-    </View>
+    <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+      <ThemedText type="error">{texto}</ThemedText>
+    </ThemedView>
   );
 }
