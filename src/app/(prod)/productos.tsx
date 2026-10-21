@@ -1,6 +1,11 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedButton } from '@/components/ThemedButton';
@@ -9,6 +14,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { ProductoCard } from '@/components/productos/ProductoCard';
 import { supabase } from '@/supabase';
+import { useTheme } from '@/theme';
 
 type Producto = {
   id: string;
@@ -20,8 +26,28 @@ type Producto = {
   existencias: number;
 };
 
+type Relacion = {
+  nombre: string;
+} | {
+  nombre: string;
+}[] | null;
+
+// Obtener el nombre de una relación de Supabase.
+function obtenerNombre(
+  relacion: Relacion,
+  valorDefecto: string
+): string {
+  if (Array.isArray(relacion)) {
+    return relacion[0]?.nombre ?? valorDefecto;
+  }
+
+  return relacion?.nombre ?? valorDefecto;
+}
+
 export default function ProductosScreen() {
   const router = useRouter();
+  const colors = useTheme();
+
   const [busqueda, setBusqueda] = useState('');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -54,30 +80,33 @@ export default function ProductosScreen() {
 
       if (errorStock) throw errorStock;
 
-      const lista: Producto[] = (data ?? []).map((p: any) => {
-        const tipo = Array.isArray(p.tipos_producto)
-          ? p.tipos_producto[0]
-          : p.tipos_producto;
+      const lista: Producto[] = (data ?? []).map((p) => {
+        const tipo = obtenerNombre(
+          p.tipos_producto,
+          'Sin tipo'
+        );
 
-        const marca = Array.isArray(p.marcas)
-          ? p.marcas[0]
-          : p.marcas;
+        const marca = obtenerNombre(
+          p.marcas,
+          'Sin marca'
+        );
 
-        const unidad = Array.isArray(p.unidades_medida)
-          ? p.unidades_medida[0]
-          : p.unidades_medida;
+        const unidad = obtenerNombre(
+          p.unidades_medida,
+          ''
+        );
 
         const stock = existencias?.find(
           (e) => e.producto_id === p.id
         );
 
         return {
-          id: p.id,
-          tipo: tipo?.nombre ?? 'Sin tipo',
-          marca: marca?.nombre ?? 'Sin marca',
+          id: String(p.id),
+          tipo,
+          marca,
           modelo: p.modelo,
           descripcion: p.descripcion ?? '',
-          unidad: unidad?.nombre ?? '',
+          unidad,
           existencias: Number(stock?.total ?? 0),
         };
       });
@@ -97,7 +126,7 @@ export default function ProductosScreen() {
   );
 
   const productosFiltrados = productos.filter((producto) => {
-    const texto = busqueda.toLowerCase();
+    const texto = busqueda.trim().toLowerCase();
 
     return (
       producto.tipo.toLowerCase().includes(texto) ||
@@ -115,6 +144,17 @@ export default function ProductosScreen() {
             gap: 16,
           }}
         >
+          <TouchableOpacity onPress={() => router.back()}>
+            <ThemedText
+              style={{
+                color: colors.primario,
+                fontWeight: 'bold',
+              }}
+            >
+              ← Volver
+            </ThemedText>
+          </TouchableOpacity>
+
           <View>
             <ThemedText type="titulo">
               Productos

@@ -1,4 +1,3 @@
-
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -15,6 +14,86 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { supabase } from '@/supabase';
 import { useTheme } from '@/theme';
+
+// Mostrar una confirmación y esperar la respuesta.
+function confirmarCreacion(nombre: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert(
+      'Confirmar registro',
+      `"${nombre}" no existe. ¿Deseas registrarlo?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: 'Crear',
+          onPress: () => resolve(true),
+        },
+      ],
+      {
+        cancelable: false,
+      }
+    );
+  });
+}
+
+// Buscar un tipo o marca y crearlo con confirmación.
+async function buscarOCrear(
+  tabla: 'tipos_producto' | 'marcas',
+  nombre: string
+): Promise<number | string | null> {
+  const nombreLimpio = nombre.trim().replace(/\s+/g, ' ');
+
+  const { data, error } = await supabase
+    .from(tabla)
+    .select('id, nombre')
+    .ilike('nombre', nombreLimpio);
+
+  if (error) throw error;
+
+  const existente = data?.find(
+    (item) =>
+      item.nombre.trim().replace(/\s+/g, ' ').toLowerCase() ===
+      nombreLimpio.toLowerCase()
+  );
+
+  if (existente) return existente.id;
+
+  const confirmado = await confirmarCreacion(nombreLimpio);
+
+  if (!confirmado) return null;
+
+  const { data: nuevo, error: errorInsertar } = await supabase
+    .from(tabla)
+    .insert({ nombre: nombreLimpio })
+    .select('id')
+    .single();
+
+  if (errorInsertar) {
+    // Si otro usuario lo creó mientras confirmábamos,
+    // intentamos encontrarlo nuevamente.
+    const { data: repetidos, error: errorBuscar } = await supabase
+      .from(tabla)
+      .select('id, nombre')
+      .ilike('nombre', nombreLimpio);
+
+    if (errorBuscar) throw errorBuscar;
+
+    const repetido = repetidos?.find(
+      (item) =>
+        item.nombre.trim().replace(/\s+/g, ' ').toLowerCase() ===
+        nombreLimpio.toLowerCase()
+    );
+
+    if (repetido) return repetido.id;
+
+    throw errorInsertar;
+  }
+
+  return nuevo.id;
+}
 
 export default function NuevoProductoScreen() {
   const router = useRouter();
@@ -41,71 +120,53 @@ export default function NuevoProductoScreen() {
     setGuardando(true);
 
     try {
-      // Buscar tipo de producto
-      const { data: tipoData, error: tipoError } =
-        await supabase
-          .from('tipos_producto')
-          .select('id')
-          .ilike('nombre', tipo.trim())
-          .maybeSingle();
+      // Verificar o crear el tipo de producto.
+      const tipoId = await buscarOCrear(
+        'tipos_producto',
+        tipo
+      );
 
-      if (tipoError) throw tipoError;
+      if (tipoId === null) return;
 
-      if (!tipoData) {
-        Alert.alert(
-          'Aviso',
-          'El tipo de producto no existe en la base de datos.'
-        );
-        return;
-      }
-
-      // Buscar marca
-      let marcaId: number | null = null;
+      // Verificar o crear la marca.
+      let marcaId: number | string | null = null;
 
       if (marca.trim()) {
-        const { data: marcaData, error: marcaError } =
-          await supabase
-            .from('marcas')
-            .select('id')
-            .ilike('nombre', marca.trim())
-            .maybeSingle();
+        marcaId = await buscarOCrear('marcas', marca);
 
-        if (marcaError) throw marcaError;
-
-        if (!marcaData) {
-          Alert.alert(
-            'Aviso',
-            'La marca no existe en la base de datos.'
-          );
-          return;
-        }
-
-        marcaId = marcaData.id;
+        if (marcaId === null) return;
       }
 
-      // Buscar unidad de medida
-      const { data: unidadData, error: unidadError } =
+      // Buscar unidad de medida.
+      const nombreUnidad = unidad.trim() || 'Unidad';
+
+      const { data: unidades, error: unidadError } =
         await supabase
           .from('unidades_medida')
-          .select('id')
-          .ilike('nombre', unidad.trim() || 'Unidad')
-          .maybeSingle();
+          .select('id, nombre')
+          .ilike('nombre', nombreUnidad);
 
       if (unidadError) throw unidadError;
+
+      const unidadData = unidades?.find(
+        (item) =>
+          item.nombre.trim().toLowerCase() ===
+          nombreUnidad.toLowerCase()
+      );
 
       if (!unidadData) {
         Alert.alert(
           'Aviso',
-          'La unidad de medida no existe.'
+          'La unidad de medida no existe en la base de datos.'
         );
         return;
       }
 
-      // Guardar producto en Supabase
+      // Registrar producto.
       const { error: guardarError } = await supabase
         .from('productos')
         .insert({
-          tipo_producto_id: tipoData.id,
+          tipo_producto_id: tipoId,
           marca_id: marcaId,
           modelo: modelo.trim(),
           descripcion: descripcion.trim() || null,
