@@ -13,7 +13,7 @@ export default function DetalleProductoScreen() {
   const colors = useTheme();
   const { id } = useLocalSearchParams();
   const producto = productosPrueba.find(
-    (item) => item.id === Number(id)
+    (item) => item.id === String(id)
   );
 
   if (!producto) {
