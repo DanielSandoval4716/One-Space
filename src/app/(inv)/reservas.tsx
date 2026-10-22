@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Href, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -58,10 +58,19 @@ export default function Reservas() {
     ]);
   }
 
-  function convertirEnSalida() {
-    // TODO: cuando exista el módulo de Salidas, esto debe registrar la salida
-    // (registrar_movimiento con solo ubicación de origen) y marcar la reserva como convertida.
-    Alert.alert('Convertir en salida', 'Esta función estará disponible cuando exista el módulo de Salidas.');
+  // Abre el formulario de Salida con los datos de la reserva ya llenos.
+  // Al guardar la salida, la reserva queda como convertida (ver operacion.tsx).
+  function convertirEnSalida(reserva: Reserva) {
+    const datos = [
+      ['tipo', 'salida'],
+      ['productoId', reserva.productoId],
+      ['cantidad', String(reserva.cantidad)],
+      ['reservaId', String(reserva.id)],
+      ['responsable', reserva.responsable],
+      ['nota', `Reserva: ${reserva.motivo}`],
+    ];
+    const consulta = datos.map(([clave, valor]) => `${clave}=${encodeURIComponent(valor)}`).join('&');
+    router.push(`/operacion?${consulta}` as Href);
   }
 
   const visibles = reservas
@@ -116,7 +125,7 @@ export default function Reservas() {
 
               {r.estado === 'activa' && puedeVer(perfil, ['inventario.reserva']) && (
                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-                  <TouchableOpacity onPress={convertirEnSalida}>
+                  <TouchableOpacity onPress={() => convertirEnSalida(r)}>
                     <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>Convertir en salida</ThemedText>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => cancelar(r)}>
