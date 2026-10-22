@@ -10,12 +10,15 @@ import { ThemedView } from '@/components/ThemedView';
 import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
 import { useTheme } from '@/theme';
 
+// Entradas, salidas y transferencias usan la misma pantalla (operacion.tsx).
+const rutaOperacion = (tipo: string) => `/operacion?tipo=${tipo}` as Href;
+
 // Para agregar una sección nueva basta con ponerle su "ruta".
 const secciones: { titulo: string; descripcion: string; ruta?: Href; permisos?: string[] }[] = [
-  { titulo: 'Existencias', descripcion: 'Consultar cantidades por producto y ubicación.' }, // TODO: pantalla Existencias
-  { titulo: 'Entradas', descripcion: 'Registrar productos que ingresan.', permisos: ['inventario.entrada'] }, // TODO: pantalla Entradas
-  { titulo: 'Salidas', descripcion: 'Registrar unidades que salen.', permisos: ['inventario.salida'] }, // TODO: pantalla Salidas
-  { titulo: 'Transferencias', descripcion: 'Mover existencias entre ubicaciones.', permisos: ['inventario.transferencia'] }, // TODO: pantalla Transferencias
+  { titulo: 'Existencias', descripcion: 'Consultar cantidades por producto y ubicación.', ruta: '/existencias' as Href },
+  { titulo: 'Entradas', descripcion: 'Registrar productos que ingresan.', ruta: rutaOperacion('entrada'), permisos: ['inventario.entrada'] },
+  { titulo: 'Salidas', descripcion: 'Registrar unidades que salen.', ruta: rutaOperacion('salida'), permisos: ['inventario.salida'] },
+  { titulo: 'Transferencias', descripcion: 'Mover existencias entre ubicaciones.', ruta: rutaOperacion('transferencia'), permisos: ['inventario.transferencia'] },
   {
     titulo: 'Ajustes',
     descripcion: 'Corregir diferencias entre lo registrado y lo físico.',

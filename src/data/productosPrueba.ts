@@ -1,5 +1,5 @@
 export type Producto = {
-  id: number;
+  id: string;
   tipo: string;
   marca: string;
   modelo: string;
@@ -10,7 +10,7 @@ export type Producto = {
 
 export const productosPrueba: Producto[] = [
   {
-    id: 1,
+    id: '1',
     tipo: 'Mouse',
     marca: 'eTouch',
     modelo: 'ET-M10',
@@ -19,7 +19,7 @@ export const productosPrueba: Producto[] = [
     existencias: 35,
   },
   {
-    id: 2,
+    id: '2',
     tipo: 'Mouse',
     marca: 'Logitech',
     modelo: 'G502',
@@ -28,7 +28,7 @@ export const productosPrueba: Producto[] = [
     existencias: 18,
   },
   {
-    id: 3,
+    id: '3',
     tipo: 'Teclado',
     marca: 'Redragon',
     modelo: 'K552',

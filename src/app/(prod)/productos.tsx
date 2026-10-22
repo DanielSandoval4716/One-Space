@@ -1,6 +1,11 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedButton } from '@/components/ThemedButton';
@@ -8,14 +13,120 @@ import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { ProductoCard } from '@/components/productos/ProductoCard';
-import { productosPrueba } from '@/data/productosPrueba';
+import { supabase } from '@/supabase';
+import { useTheme } from '@/theme';
+
+type Producto = {
+  id: string;
+  tipo: string;
+  marca: string;
+  modelo: string;
+  descripcion: string;
+  unidad: string;
+  existencias: number;
+};
+
+type Relacion = {
+  nombre: string;
+} | {
+  nombre: string;
+}[] | null;
+
+// Obtener el nombre de una relación de Supabase.
+function obtenerNombre(
+  relacion: Relacion,
+  valorDefecto: string
+): string {
+  if (Array.isArray(relacion)) {
+    return relacion[0]?.nombre ?? valorDefecto;
+  }
+
+  return relacion?.nombre ?? valorDefecto;
+}
 
 export default function ProductosScreen() {
   const router = useRouter();
-  const [busqueda, setBusqueda] = useState('');
+  const colors = useTheme();
 
-  const productosFiltrados = productosPrueba.filter((producto) => {
-    const texto = busqueda.toLowerCase();
+  const [busqueda, setBusqueda] = useState('');
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+
+  const cargarProductos = useCallback(async () => {
+    setCargando(true);
+    setError('');
+
+    try {
+      const { data, error: errorProductos } = await supabase
+        .from('productos')
+        .select(`
+          id,
+          modelo,
+          descripcion,
+          tipos_producto(nombre),
+          marcas(nombre),
+          unidades_medida(nombre)
+        `)
+        .eq('activo', true)
+        .order('modelo');
+
+      if (errorProductos) throw errorProductos;
+
+      const { data: existencias, error: errorStock } =
+        await supabase
+          .from('existencias_por_producto')
+          .select('producto_id, total');
+
+      if (errorStock) throw errorStock;
+
+      const lista: Producto[] = (data ?? []).map((p) => {
+        const tipo = obtenerNombre(
+          p.tipos_producto,
+          'Sin tipo'
+        );
+
+        const marca = obtenerNombre(
+          p.marcas,
+          'Sin marca'
+        );
+
+        const unidad = obtenerNombre(
+          p.unidades_medida,
+          ''
+        );
+
+        const stock = existencias?.find(
+          (e) => e.producto_id === p.id
+        );
+
+        return {
+          id: String(p.id),
+          tipo,
+          marca,
+          modelo: p.modelo,
+          descripcion: p.descripcion ?? '',
+          unidad,
+          existencias: Number(stock?.total ?? 0),
+        };
+      });
+
+      setProductos(lista);
+    } catch (e: any) {
+      setError(e.message ?? 'Error al cargar productos');
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarProductos();
+    }, [cargarProductos])
+  );
+
+  const productosFiltrados = productos.filter((producto) => {
+    const texto = busqueda.trim().toLowerCase();
 
     return (
       producto.tipo.toLowerCase().includes(texto) ||
@@ -33,6 +144,17 @@ export default function ProductosScreen() {
             gap: 16,
           }}
         >
+          <TouchableOpacity onPress={() => router.back()}>
+            <ThemedText
+              style={{
+                color: colors.primario,
+                fontWeight: 'bold',
+              }}
+            >
+              ← Volver
+            </ThemedText>
+          </TouchableOpacity>
+
           <View>
             <ThemedText type="titulo">
               Productos
@@ -63,24 +185,34 @@ export default function ProductosScreen() {
             Productos registrados
           </ThemedText>
 
-          {productosFiltrados.map((producto) => (
-            <ProductoCard
-              key={producto.id}
-              producto={producto}
-              onPress={() =>
-                router.push({
-                  pathname: '/detalle',
-                  params: { id: producto.id },
-                })
-              }
-            />
-          ))}
+          {cargando && <ActivityIndicator size="large" />}
 
-          {productosFiltrados.length === 0 && (
-            <ThemedText type="suave">
-              No se encontraron productos.
+          {!!error && (
+            <ThemedText>
+              Error: {error}
             </ThemedText>
           )}
+
+          {!cargando && !error &&
+            productosFiltrados.map((producto) => (
+              <ProductoCard
+                key={producto.id}
+                producto={producto}
+                onPress={() =>
+                  router.push({
+                    pathname: '/detalle',
+                    params: { id: producto.id },
+                  })
+                }
+              />
+            ))}
+
+          {!cargando && !error &&
+            productosFiltrados.length === 0 && (
+              <ThemedText type="suave">
+                No se encontraron productos.
+              </ThemedText>
+            )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
