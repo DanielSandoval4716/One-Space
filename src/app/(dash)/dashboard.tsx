@@ -16,8 +16,7 @@ const modulos: { titulo: string; ruta?: Href; permisos?: string[] }[] = [
   { titulo: 'Inventario', ruta: '/inventario' },
   { titulo: 'Bodegas', ruta: '/bodegas' },
   { titulo: 'Movimientos', ruta: '/movimientos' },
-  { titulo: 'Conteos', permisos: ['conteos.realizar'] }, // TODO: pantalla Conteos (hace falta crear sus tablas)
-  { titulo: 'Directorio', ruta: '/directorio', permisos: ['proveedores.gestionar', 'personas.gestionar'] },
+{ titulo: 'Conteos', ruta: '/conteos', permisos: ['conteos.realizar'] },  { titulo: 'Directorio', ruta: '/directorio', permisos: ['proveedores.gestionar', 'personas.gestionar'] },
   { titulo: 'Documentos' }, // TODO: pantalla Documentos (archivos y evidencias)
   { titulo: 'Reportes', permisos: ['reportes.ver'] }, // TODO: pantalla Reportes
   { titulo: 'Auditoría', permisos: ['auditoria.ver'] }, // TODO: pantalla Auditoría
