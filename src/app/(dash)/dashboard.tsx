@@ -21,7 +21,6 @@ const modulos: { titulo: string; ruta?: Href; permisos?: string[] }[] = [
   { titulo: 'Documentos' }, // TODO: pantalla Documentos (archivos y evidencias)
   { titulo: 'Reportes', permisos: ['reportes.ver'] }, // TODO: pantalla Reportes
   { titulo: 'Auditoría', permisos: ['auditoria.ver'] }, // TODO: pantalla Auditoría
-  { titulo: 'Configuración', permisos: ['configuracion.gestionar'] }, // TODO: pantalla Configuración
 ];
 
 const TIPOS: Record<string, string> = {
@@ -105,8 +104,6 @@ export default function Dashboard() {
 
           {perfil && resumen && (
             <>
-              {/* TODO: widgets configurables (que cada usuario elija qué resumen ver) */}
-              {/* Resumen */}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                 <Dato titulo="Productos registrados" valor={resumen.productos} />
                 <Dato titulo="Existencias actuales" valor={resumen.existencias} />
