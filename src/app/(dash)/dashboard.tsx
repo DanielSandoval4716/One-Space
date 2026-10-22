@@ -112,8 +112,6 @@ export default function Dashboard() {
                   valor={resumen.stockBajo}
                   color={resumen.stockBajo > 0 ? colors.aviso : undefined}
                 />
-                {/* TODO: conteos pendientes (hace falta la tabla de conteos) */}
-                <Dato titulo="Conteos pendientes" valor="—" />
               </View>
 
               <ThemedText style={subtitulo}>Alertas</ThemedText>
