@@ -3,15 +3,21 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { obtenerSesion } from '@/auth';
+import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedCard } from '@/components/ThemedCard';
+import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { obtenerPerfil, puedeVer } from '@/permisos';
+import { formatearPrecio, leerPrecio, MONEDA } from '@/precios';
 import { supabase } from '@/supabase';
 import { useTheme } from '@/theme';
 
@@ -23,6 +29,7 @@ type Producto = {
   descripcion: string;
   unidad: string;
   existencias: number;
+  precio: number | null;
 };
 
 export default function DetalleProductoScreen() {
@@ -33,6 +40,11 @@ export default function DetalleProductoScreen() {
   const [producto, setProducto] = useState<Producto | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+
+  const [puedeEditar, setPuedeEditar] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [textoPrecio, setTextoPrecio] = useState('');
+  const [guardandoPrecio, setGuardandoPrecio] = useState(false);
 
   useEffect(() => {
     async function cargarDetalle() {
@@ -47,13 +59,13 @@ export default function DetalleProductoScreen() {
       }
 
       try {
-        // Consultar producto en Supabase
         const { data, error: errorProducto } = await supabase
           .from('productos')
           .select(`
             id,
             modelo,
             descripcion,
+            precio,
             tipos_producto(nombre),
             marcas(nombre),
             unidades_medida(nombre)
@@ -68,7 +80,6 @@ export default function DetalleProductoScreen() {
           return;
         }
 
-        // Consultar existencias
         const { data: stock, error: errorStock } = await supabase
           .from('existencias_por_producto')
           .select('total')
@@ -77,7 +88,6 @@ export default function DetalleProductoScreen() {
 
         if (errorStock) throw errorStock;
 
-        // Obtener tipo, marca y unidad
         const tipoData = Array.isArray(data.tipos_producto)
           ? data.tipos_producto[0]
           : data.tipos_producto;
@@ -102,7 +112,13 @@ export default function DetalleProductoScreen() {
           descripcion: data.descripcion ?? '',
           unidad,
           existencias: Number(stock?.total ?? 0),
+          precio: data.precio === null ? null : Number(data.precio),
         });
+
+        const session = await obtenerSesion();
+        if (session) {
+          setPuedeEditar(puedeVer(await obtenerPerfil(session.user.id), ['productos.gestionar']));
+        }
       } catch (e: any) {
         setError(e.message ?? 'Error al cargar el producto.');
       } finally {
@@ -112,6 +128,30 @@ export default function DetalleProductoScreen() {
 
     cargarDetalle();
   }, [id]);
+
+  async function guardarPrecio() {
+    const r = leerPrecio(textoPrecio);
+    if (!r.ok) {
+      Alert.alert('Aviso', 'Ingresa un precio válido (número mayor o igual a 0).');
+      return;
+    }
+
+    setGuardandoPrecio(true);
+    const { data, error: errorPrecio } = await supabase
+      .from('productos')
+      .update({ precio: r.valor })
+      .eq('id', id)
+      .select('id');
+    setGuardandoPrecio(false);
+
+    if (errorPrecio || !data || data.length === 0) {
+      Alert.alert('Error', 'No se pudo guardar el precio. Verifica que tengas permiso.');
+      return;
+    }
+
+    setProducto((p) => (p ? { ...p, precio: r.valor } : p));
+    setEditando(false);
+  }
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -205,6 +245,65 @@ export default function DetalleProductoScreen() {
                 <ThemedText type="suave">
                   unidades
                 </ThemedText>
+              </ThemedCard>
+
+              <ThemedCard style={{ gap: 8 }}>
+                <ThemedText type="suave">Precio unitario</ThemedText>
+
+                {editando ? (
+                  <>
+                    <ThemedInput
+                      value={textoPrecio}
+                      onChangeText={setTextoPrecio}
+                      keyboardType="decimal-pad"
+                      placeholder={`Ej. ${MONEDA} 125.50`}
+                    />
+                    <ThemedButton
+                      titulo="Guardar precio"
+                      onPress={guardarPrecio}
+                      cargando={guardandoPrecio}
+                    />
+                    <TouchableOpacity onPress={() => setEditando(false)}>
+                      <ThemedText
+                        style={{ color: colors.primario, textAlign: 'center' }}
+                      >
+                        Cancelar
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <ThemedText style={{ fontSize: 30, fontWeight: 'bold' }}>
+                      {producto.precio === null
+                        ? 'Sin precio'
+                        : formatearPrecio(producto.precio)}
+                    </ThemedText>
+
+                    {producto.precio !== null && (
+                      <ThemedText type="suave">
+                        Valor en inventario:{' '}
+                        {formatearPrecio(producto.precio * producto.existencias)}
+                      </ThemedText>
+                    )}
+
+                    {puedeEditar && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setTextoPrecio(
+                            producto.precio === null ? '' : String(producto.precio)
+                          );
+                          setEditando(true);
+                        }}
+                      >
+                        <ThemedText
+                          style={{ color: colors.primario, fontWeight: 'bold' }}
+                        >
+                          {producto.precio === null ? 'Asignar precio' : 'Cambiar precio'}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
               </ThemedCard>
             </>
           )}

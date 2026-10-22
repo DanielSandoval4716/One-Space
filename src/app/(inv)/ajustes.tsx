@@ -31,7 +31,6 @@ export default function Ajustes() {
 
     setPerfil(await obtenerPerfil(session.user.id));
 
-    // Los ajustes realizados son movimientos de tipo "ajuste"
     const datos = await obtenerMovimientos({ tipo: 'ajuste', limite: 50 });
     if (datos === null) {
       setError('No se pudieron cargar los ajustes.');
@@ -68,6 +67,23 @@ export default function Ajustes() {
 
           {puedeVer(perfil, ['inventario.ajuste']) && (
             <ThemedButton titulo="+ Nuevo ajuste" onPress={() => router.push('/ajuste-nuevo')} />
+          )}
+
+          {puedeVer(perfil, ['productos.gestionar']) && (
+            <TouchableOpacity
+              onPress={() => router.push('/ajuste-precio' as never)}
+              style={{
+                borderColor: colors.primario,
+                borderWidth: 1,
+                padding: 14,
+                borderRadius: 12,
+                alignItems: 'center',
+              }}
+            >
+              <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>
+                Ajustar precio de un producto
+              </ThemedText>
+            </TouchableOpacity>
           )}
 
           <ThemedText style={{ fontSize: 18, fontWeight: 'bold' }}>Ajustes registrados</ThemedText>
