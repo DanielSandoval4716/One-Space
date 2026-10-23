@@ -17,8 +17,9 @@ import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FotoYQR } from '@/components/productos/FotoYQR';
+import { ProductoExtra } from '@/components/productos/ProductoExtra';
 import { obtenerPerfil, puedeVer } from '@/permisos';
-import { formatearPrecio, leerPrecio, MONEDA } from '@/precios';
+import { formatearPrecio, guardarPrecio as guardarPrecioDB, leerPrecio, MONEDA } from '@/precios';
 import { supabase } from '@/supabase';
 import { useTheme } from '@/theme';
 
@@ -138,15 +139,11 @@ export default function DetalleProductoScreen() {
     }
 
     setGuardandoPrecio(true);
-    const { data, error: errorPrecio } = await supabase
-      .from('productos')
-      .update({ precio: r.valor })
-      .eq('id', id)
-      .select('id');
+    const errorPrecio = await guardarPrecioDB(id, r.valor);
     setGuardandoPrecio(false);
 
-    if (errorPrecio || !data || data.length === 0) {
-      Alert.alert('Error', 'No se pudo guardar el precio. Verifica que tengas permiso.');
+    if (errorPrecio) {
+      Alert.alert('Error', errorPrecio);
       return;
     }
 
@@ -237,6 +234,8 @@ export default function DetalleProductoScreen() {
                   unidades
                 </ThemedText>
               </ThemedCard>
+
+              <ProductoExtra productoId={producto.id} />
 
               <ThemedCard style={{ gap: 8 }}>
                 <ThemedText type="suave">Precio unitario</ThemedText>

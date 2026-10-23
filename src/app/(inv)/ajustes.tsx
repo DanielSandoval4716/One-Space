@@ -46,9 +46,9 @@ export default function Ajustes() {
       setError('No se pudieron cargar los ajustes.');
     } else {
       setError('');
-      setLista(movimientos);
+      setLista(datos);
     }
-    setSolicitudes(pedidos ?? []);
+    setSolicitudes((await obtenerSolicitudes()) ?? []);
     setCargando(false);
   }, []);
 

@@ -18,8 +18,8 @@ const modulos: { titulo: string; ruta?: Href; permisos?: string[] }[] = [
   { titulo: 'Movimientos', ruta: '/movimientos' },
 { titulo: 'Conteos', ruta: '/conteos', permisos: ['conteos.realizar'] },  { titulo: 'Directorio', ruta: '/directorio', permisos: ['proveedores.gestionar', 'personas.gestionar'] },
   { titulo: 'Documentos', ruta: '/documentos' },
-  { titulo: 'Reportes', permisos: ['reportes.ver'] }, // TODO: pantalla Reportes
-  { titulo: 'Auditoría', permisos: ['auditoria.ver'] }, // TODO: pantalla Auditoría
+  { titulo: 'Reportes', ruta: '/reportes', permisos: ['reportes.ver'] },
+  { titulo: 'Auditoría', ruta: '/auditoria', permisos: ['auditoria.ver'] },
 ];
 
 const TIPOS: Record<string, string> = {
@@ -76,6 +76,17 @@ export default function Dashboard() {
 
   const subtitulo = { fontSize: 18, fontWeight: 'bold' } as const;
 
+  // Alertas que se muestran en el dashboard.
+  const p = resumen?.pendientes;
+  const alertas = resumen
+    ? [
+        resumen.stockBajo > 0 && `${resumen.stockBajo} producto(s) con existencias bajas`,
+        p && p.conteos > 0 && `${p.conteos} conteo(s) en progreso`,
+        p && p.ajustes > 0 && `${p.ajustes} ajuste(s) por autorizar`,
+        p && p.reservas > 0 && `${p.reservas} reserva(s) activa(s)`,
+      ].filter((a): a is string => !!a)
+    : [];
+
   return (
     <ThemedView style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -114,16 +125,12 @@ export default function Dashboard() {
               </View>
 
               <ThemedText style={subtitulo}>Alertas</ThemedText>
-              {resumen.stockBajo > 0 ? (
-                <ThemedCard>
-                  <ThemedText style={{ color: colors.aviso }}>
-                    ⚠ {resumen.stockBajo} producto{resumen.stockBajo === 1 ? '' : 's'} con existencias bajas
-                  </ThemedText>
+              {alertas.length === 0 && <ThemedText type="suave">Sin alertas.</ThemedText>}
+              {alertas.map((a) => (
+                <ThemedCard key={a}>
+                  <ThemedText style={{ color: colors.aviso }}>⚠ {a}</ThemedText>
                 </ThemedCard>
-              ) : (
-                <ThemedText type="suave">Sin alertas.</ThemedText>
-              )}
-              {/* TODO: más alertas y notificaciones (conteos pendientes, ajustes por autorizar...) */}
+              ))}
 
               {/* Accesos: solo las áreas que el rol permite */}
               <ThemedText style={subtitulo}>Accesos</ThemedText>

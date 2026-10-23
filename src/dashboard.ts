@@ -16,10 +16,14 @@ export type Resumen = {
   stockBajo: number;
   movimientos: MovimientoReciente[];
   operaciones: OperacionReciente[] | null;
+  pendientes: { conteos: number; ajustes: number; reservas: number };
 };
 
 export async function obtenerResumen(verAuditoria: boolean): Promise<Resumen> {
-  const [prod, exist, movs, ops] = await Promise.all([
+  const contar = (tabla: string, estado: string) =>
+    supabase.from(tabla).select("*", { count: "exact", head: true }).eq("estado", estado);
+
+  const [prod, exist, movs, ops, conteos, ajustes, reservas] = await Promise.all([
     supabase
       .from("productos")
       .select("*", { count: "exact", head: true })
@@ -37,9 +41,12 @@ export async function obtenerResumen(verAuditoria: boolean): Promise<Resumen> {
           .order("fecha", { ascending: false })
           .limit(5)
       : null,
+    contar("conteos", "en_progreso"),
+    contar("solicitudes_ajuste", "pendiente"),
+    contar("reservas", "activa"),
   ]);
 
-  for (const r of [prod, exist, movs, ops]) {
+  for (const r of [prod, exist, movs, ops, conteos, ajustes, reservas]) {
     if (r?.error) console.log(r.error.message);
   }
 
@@ -51,5 +58,6 @@ export async function obtenerResumen(verAuditoria: boolean): Promise<Resumen> {
     stockBajo: filas.filter((f) => f.stock_bajo).length,
     movimientos: (movs.data ?? []) as unknown as MovimientoReciente[],
     operaciones: ops ? ((ops.data ?? []) as OperacionReciente[]) : null,
+    pendientes: { conteos: conteos.count ?? 0, ajustes: ajustes.count ?? 0, reservas: reservas.count ?? 0 },
   };
 }

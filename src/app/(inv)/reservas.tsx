@@ -195,11 +195,7 @@ export default function Reservas() {
 
               {r.estado === 'activa' && puedeReservar && convirtiendo !== r.id && (
                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-<<<<<<< HEAD
-                  <TouchableOpacity onPress={() => convertirEnSalida(r)}>
-=======
                   <TouchableOpacity onPress={() => abrirConversion(r)}>
->>>>>>> main
                     <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>Convertir en salida</ThemedText>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => cancelar(r)}>
