@@ -8,11 +8,7 @@ import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { ContactoCard } from '@/components/directorio/ContactoCard';
-import {
-  personasPrueba,
-  proveedoresPrueba,
-  TipoContacto,
-} from '@/data/directorioPrueba';
+import { Persona, Proveedor, TipoContacto, obtenerPersonas, obtenerProveedores } from '@/directorio';
 import { useTheme } from '@/theme';
 
 const PESTANAS: { tipo: TipoContacto; titulo: string }[] = [
@@ -25,25 +21,27 @@ export default function DirectorioScreen() {
   const colors = useTheme();
   const [pestana, setPestana] = useState<TipoContacto>('proveedor');
   const [busqueda, setBusqueda] = useState('');
-  const [, setVersion] = useState(0);
+  const [listaProveedores, setListaProveedores] = useState<Proveedor[]>([]);
+  const [listaPersonas, setListaPersonas] = useState<Persona[]>([]);
 
-  // Al volver desde el detalle, se vuelve a leer la lista.
+  // Al volver desde el detalle, se vuelve a leer la lista desde Supabase.
   useFocusEffect(
     useCallback(() => {
-      setVersion((v) => v + 1);
+      obtenerProveedores().then(setListaProveedores);
+      obtenerPersonas().then(setListaPersonas);
     }, [])
   );
 
   const texto = busqueda.toLowerCase();
 
-  const proveedores = proveedoresPrueba.filter(
+  const proveedores = listaProveedores.filter(
     (p) =>
       p.nombre.toLowerCase().includes(texto) ||
       p.identificacion.toLowerCase().includes(texto) ||
       p.contacto.toLowerCase().includes(texto)
   );
 
-  const personas = personasPrueba.filter(
+  const personas = listaPersonas.filter(
     (p) =>
       p.nombre.toLowerCase().includes(texto) ||
       p.identificacion.toLowerCase().includes(texto) ||
@@ -163,7 +161,7 @@ export default function DirectorioScreen() {
                 titulo={p.nombre}
                 lineas={[
                   p.cargo && `Cargo: ${p.cargo}`,
-                  p.roles.length > 0 && `Roles: ${p.roles.join(', ')}`,
+                  p.roles.length > 0 && `Responsabilidades: ${p.roles.map((r) => r.nombre).join(', ')}`,
                 ].filter((l): l is string => !!l)}
                 onPress={() => abrir('persona', p.id)}
               />

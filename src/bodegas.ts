@@ -48,3 +48,21 @@ export async function crearUbicacion(
   if (error) console.log(error.message);
   return error === null;
 }
+
+// Productos que hay en cada ubicación de una bodega: { ubicacionId: ["Marca Modelo: 5 un"] }
+export async function obtenerExistenciasDeBodega(bodegaId: number) {
+  const { data, error } = await supabase
+    .from("existencias")
+    .select("ubicacion_id, cantidad, ubicaciones!inner(bodega_id), producto:productos(modelo, marcas(nombre), unidades_medida(abreviatura))")
+    .eq("ubicaciones.bodega_id", bodegaId)
+    .neq("cantidad", 0);
+  if (error) console.log(error.message);
+
+  const resultado: Record<number, string[]> = {};
+  for (const f of (data ?? []) as any[]) {
+    const nombre = [f.producto?.marcas?.nombre, f.producto?.modelo].filter(Boolean).join(" ");
+    const linea = `${nombre}: ${Number(f.cantidad)} ${f.producto?.unidades_medida?.abreviatura ?? ""}`.trim();
+    (resultado[f.ubicacion_id] ??= []).push(linea);
+  }
+  return resultado;
+}

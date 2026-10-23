@@ -15,6 +15,8 @@ export type ExistenciaProducto = {
   tipo: string;
   unidad: string;
   total: number; // suma de todas las ubicaciones
+  reservado: number;
+  disponible: number;
   stockBajo: boolean;
   ubicaciones: ExistenciaUbicacion[]; // solo donde hay cantidad
 };
@@ -62,6 +64,8 @@ export async function obtenerExistencias(): Promise<ExistenciaProducto[] | null>
     tipo: p.tipo,
     unidad: p.unidad,
     total: p.total,
+    reservado: p.reservado,
+    disponible: p.disponible,
     stockBajo: bajos.has(p.id),
     ubicaciones: (porProducto.get(p.id) ?? [])
       .filter((u) => u.cantidad !== 0)

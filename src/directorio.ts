@@ -20,22 +20,13 @@ export type Persona = {
   cargo: string;
   telefono: string;
   correo: string;
-  roles: Responsabilidad[];
+  roles: Responsabilidad[]; // responsabilidades de la persona
 };
 
-export type EntradaProveedor = {
-  id: number;
-  fecha: string;
-  cantidad: number;
-  producto: string;
-};
+export type EntradaProveedor = { id: number; fecha: string; cantidad: number; producto: string };
 
 export async function obtenerProveedores(): Promise<Proveedor[]> {
-  const { data, error } = await supabase
-    .from("proveedores")
-    .select("*")
-    .eq("activo", true)
-    .order("nombre");
+  const { data, error } = await supabase.from("proveedores").select("*").eq("activo", true).order("nombre");
   if (error) console.log(error.message);
   return (data ?? []).map((p: any) => ({
     id: p.id,
@@ -43,7 +34,7 @@ export async function obtenerProveedores(): Promise<Proveedor[]> {
     identificacion: p.identificacion ?? "",
     contacto: p.contacto ?? "",
     telefono: p.telefono ?? "",
-    correo: p.email ?? "",
+    correo: p.correo ?? "",
     direccion: p.direccion ?? "",
   }));
 }
@@ -51,9 +42,7 @@ export async function obtenerProveedores(): Promise<Proveedor[]> {
 export async function obtenerPersonas(): Promise<Persona[]> {
   const { data, error } = await supabase
     .from("personas")
-    .select(
-      "id, nombre, identificacion, cargo, telefono, email, persona_responsabilidades(responsabilidades(id, nombre))",
-    )
+    .select("id, nombre, identificacion, cargo, telefono, email, persona_responsabilidades(responsabilidades(id, nombre))")
     .eq("activa", true)
     .order("nombre");
   if (error) console.log(error.message);
@@ -64,32 +53,21 @@ export async function obtenerPersonas(): Promise<Persona[]> {
     cargo: p.cargo ?? "",
     telefono: p.telefono ?? "",
     correo: p.email ?? "",
-    roles: (p.persona_responsabilidades ?? [])
-      .map((r: any) => r.responsabilidades)
-      .filter(Boolean),
+    roles: (p.persona_responsabilidades ?? []).map((r: any) => r.responsabilidades).filter(Boolean),
   }));
 }
 
 export async function obtenerResponsabilidades(): Promise<Responsabilidad[]> {
-  const { data } = await supabase
-    .from("responsabilidades")
-    .select("id, nombre")
-    .order("nombre");
+  const { data } = await supabase.from("responsabilidades").select("id, nombre").order("nombre");
   return (data ?? []) as Responsabilidad[];
 }
 
 // Cada función de guardar devuelve null si salió bien, o el mensaje de error.
-export async function guardarProveedor(
-  datos: Omit<Proveedor, "id"> & { id?: number },
-): Promise<string | null> {
-  const { id, correo, ...resto } = datos;
-  const campos = { ...resto, email: correo };
+export async function guardarProveedor(datos: Omit<Proveedor, "id"> & { id?: number }): Promise<string | null> {
+  const { id, ...campos } = datos;
   const r = id
     ? await supabase.from("proveedores").update(campos).eq("id", id).select()
-    : await supabase
-        .from("proveedores")
-        .insert({ ...campos, activo: true })
-        .select();
+    : await supabase.from("proveedores").insert({ ...campos, activo: true }).select();
   if (r.error) return r.error.message;
   if (!r.data || r.data.length === 0) return "No tienes permiso para guardar.";
   return null;
@@ -97,39 +75,30 @@ export async function guardarProveedor(
 
 export async function guardarPersona(
   datos: Omit<Persona, "id" | "roles"> & { id?: number },
-  rolesIds: number[],
+  rolesIds: number[]
 ): Promise<string | null> {
   const { id, correo, ...resto } = datos;
   const campos = { ...resto, email: correo };
   const r = id
     ? await supabase.from("personas").update(campos).eq("id", id).select()
-    : await supabase
-        .from("personas")
-        .insert({ ...campos, activa: true })
-        .select();
+    : await supabase.from("personas").insert({ ...campos, activa: true }).select();
   if (r.error) return r.error.message;
   if (!r.data || r.data.length === 0) return "No tienes permiso para guardar.";
 
+  // Se reemplazan las responsabilidades de la persona.
   const personaId = r.data[0].id;
-  await supabase
-    .from("persona_responsabilidades")
-    .delete()
-    .eq("persona_id", personaId);
+  await supabase.from("persona_responsabilidades").delete().eq("persona_id", personaId);
   if (rolesIds.length > 0) {
-    const { error } = await supabase.from("persona_responsabilidades").insert(
-      rolesIds.map((rid) => ({
-        persona_id: personaId,
-        responsabilidad_id: rid,
-      })),
-    );
+    const { error } = await supabase
+      .from("persona_responsabilidades")
+      .insert(rolesIds.map((rid) => ({ persona_id: personaId, responsabilidad_id: rid })));
     if (error) return error.message;
   }
   return null;
 }
 
-export async function obtenerEntradasDeProveedor(
-  proveedorId: number,
-): Promise<EntradaProveedor[]> {
+// Últimas entradas de inventario que vinieron de este proveedor.
+export async function obtenerEntradasDeProveedor(proveedorId: number): Promise<EntradaProveedor[]> {
   const { data, error } = await supabase
     .from("movimientos")
     .select("id, fecha, cantidad, productos(modelo, marcas(nombre))")
@@ -142,8 +111,6 @@ export async function obtenerEntradasDeProveedor(
     id: m.id,
     fecha: m.fecha,
     cantidad: Number(m.cantidad),
-    producto: [m.productos?.marcas?.nombre, m.productos?.modelo]
-      .filter(Boolean)
-      .join(" "),
+    producto: [m.productos?.marcas?.nombre, m.productos?.modelo].filter(Boolean).join(" "),
   }));
 }

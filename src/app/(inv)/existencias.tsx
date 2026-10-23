@@ -1,4 +1,4 @@
-import { Href, useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -113,6 +113,7 @@ export default function Existencias() {
                   <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
                     <ThemedText style={{ fontSize: 28, fontWeight: 'bold' }}>{p.total}</ThemedText>
                     <ThemedText type="suave">{p.unidad || 'unidades'} en total</ThemedText>
+                    <ThemedText type="suave">Reservado {p.reservado} · Disponible {p.disponible}</ThemedText>
                   </View>
 
                   {p.stockBajo && (
@@ -147,11 +148,6 @@ export default function Existencias() {
                           </ThemedText>
                         </View>
                       ))}
-                      <Pressable onPress={() => router.push(`/movimientos?productoId=${p.id}` as Href)}>
-                        <ThemedText style={{ color: colors.primario, fontWeight: 'bold', marginTop: 4 }}>
-                          Ver movimientos de este producto
-                        </ThemedText>
-                      </Pressable>
                     </View>
                   )}
 

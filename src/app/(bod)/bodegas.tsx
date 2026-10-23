@@ -8,13 +8,14 @@ import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedButton } from '@/components/ThemedButton';
 import { obtenerSesion } from '@/auth';
-import { Bodega, Ubicacion, obtenerBodegas, crearBodega, obtenerUbicaciones, crearUbicacion } from '@/bodegas';
+import { Bodega, Ubicacion, obtenerBodegas, crearBodega, obtenerUbicaciones, crearUbicacion, obtenerExistenciasDeBodega } from '@/bodegas';
 
 export default function Bodegas() {
   const router = useRouter();
 
   const [bodega, setBodega] = useState<Bodega | null>(null);
   const [lista, setLista] = useState<(Bodega | Ubicacion)[]>([]);
+  const [contenido, setContenido] = useState<Record<number, string[]>>({});
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [error, setError] = useState('');
@@ -24,6 +25,7 @@ export default function Bodegas() {
     const datos = b ? await obtenerUbicaciones(b.id) : await obtenerBodegas();
     setBodega(b);
     setLista(datos);
+    setContenido(b ? await obtenerExistenciasDeBodega(b.id) : {});
     setNombre('');
     setDescripcion('');
     setError('');
@@ -78,6 +80,12 @@ export default function Bodegas() {
               <ThemedCard>
                 <ThemedText>{item.nombre}</ThemedText>
                 {item.descripcion && <ThemedText type="suave">{item.descripcion}</ThemedText>}
+                {bodega !== null && (contenido[item.id] ?? []).map((linea, i) => (
+                  <ThemedText key={i} type="suave">
+                    • {linea}
+                  </ThemedText>
+                ))}
+                {bodega !== null && !contenido[item.id] && <ThemedText type="suave">Sin existencias</ThemedText>}
               </ThemedCard>
             </TouchableOpacity>
           ))}

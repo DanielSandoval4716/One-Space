@@ -17,6 +17,7 @@ import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { FotoYQR } from '@/components/productos/FotoYQR';
+import { ProductoExtra } from '@/components/productos/ProductoExtra';
 import { obtenerPerfil, puedeVer } from '@/permisos';
 import { formatearPrecio, guardarPrecio as guardarPrecioDB, leerPrecio, MONEDA } from '@/precios';
 import { supabase } from '@/supabase';
@@ -234,6 +235,8 @@ export default function DetalleProductoScreen() {
                   unidades
                 </ThemedText>
               </ThemedCard>
+
+              <ProductoExtra productoId={producto.id} />
 
               <ThemedCard style={{ gap: 8 }}>
                 <ThemedText type="suave">Precio unitario</ThemedText>
