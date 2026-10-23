@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DatosAjuste, registrarAjuste, solicitarAutorizacionAjuste } from '@/ajustes';
 import { obtenerSesion } from '@/auth';
+import { SelectorDocumento } from '@/components/SelectorDocumento';
 import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -48,6 +49,7 @@ export default function AjusteNuevo() {
   const [cantidadReal, setCantidadReal] = useState('');
   const [motivoId, setMotivoId] = useState<number | null>(null);
   const [observaciones, setObservaciones] = useState('');
+  const [documentoId, setDocumentoId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -114,6 +116,7 @@ export default function AjusteNuevo() {
     if (real === null || real < 0) return setError('Escribe la cantidad real encontrada (0 o más).');
     if (diferencia === 0) return setError('La cantidad real es igual a la registrada: no hay nada que ajustar.');
     if (motivoId === null) return setError('Selecciona el motivo del ajuste.');
+    if (regla.evidencia === 'obligatoria' && documentoId === null) return setError('Adjunta la evidencia (foto o archivo).');
 
     const datos: DatosAjuste = {
       productoId: producto.id,
@@ -121,6 +124,7 @@ export default function AjusteNuevo() {
       cantidadReal: real,
       motivoId,
       observaciones,
+      documentoId,
     };
 
     setError('');
@@ -232,10 +236,12 @@ export default function AjusteNuevo() {
                 />
               </ThemedCard>
 
-              {regla.evidencia === 'obligatoria' && (
-                <ThemedText style={{ color: colors.aviso }}>
-                   Este tipo de ajuste requiere evidencia. Podrás adjuntarla cuando exista el módulo de Documentos.
-                </ThemedText>
+              {regla.evidencia !== 'innecesaria' && (
+                <SelectorDocumento
+                  documentoId={documentoId}
+                  onCambio={setDocumentoId}
+                  obligatorio={regla.evidencia === 'obligatoria'}
+                />
               )}
               {necesitaAutorizacion && (
                 <ThemedText style={{ color: colors.aviso }}>
