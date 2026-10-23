@@ -69,6 +69,17 @@ return (
         <ThemedText style={subtitulo}>Seguridad</ThemedText>
         <Acceso titulo="Roles y permisos" onPress={() => router.push('/roles')} />
         <Acceso titulo="Usuarios" onPress={() => router.push('/usuarios')} />
+
+        <ThemedText style={subtitulo}>Otros</ThemedText>
+        <Acceso
+          titulo="Ubicaciones"
+          descripcion="Se administran dentro de Bodegas"
+          onPress={() => router.push('/bodegas')}
+        />
+        <Acceso
+          titulo="Configuración general"
+          onPress={() => Alert.alert('Configuración general', 'Esta sección aún no está disponible.')}
+        />
       </ScrollView>
     </SafeAreaView>
   </ThemedView>
