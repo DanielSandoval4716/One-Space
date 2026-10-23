@@ -9,6 +9,7 @@ export type DatosAjuste = {
   cantidadReal: number;
   motivoId: number;
   observaciones: string;
+  documentoId?: number | null;
 };
 
 export type ResultadoAjuste = {
@@ -59,7 +60,7 @@ export async function registrarAjuste(
     p_cantidad_real: datos.cantidadReal,
     p_motivo: datos.motivoId,
     p_observaciones: datos.observaciones.trim() || null,
-    p_documento: null,
+    p_documento: datos.documentoId ?? null,
   });
 
   if (error) {
@@ -84,7 +85,7 @@ export async function solicitarAutorizacionAjuste(
     p_cantidad_real: datos.cantidadReal,
     p_motivo: datos.motivoId,
     p_observaciones: datos.observaciones.trim() || null,
-    p_documento: null,
+    p_documento: datos.documentoId ?? null,
   });
 
   if (error) {

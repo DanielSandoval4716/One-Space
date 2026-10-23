@@ -10,6 +10,7 @@ import { Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { obtenerSesion } from '@/auth';
+import { SelectorDocumento } from '@/components/SelectorDocumento';
 import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
@@ -108,7 +109,8 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
   const [motivoId, setMotivoId] = useState<number | null>(null);
   const [proveedorId, setProveedorId] = useState<number | null>(null);
   const [personaId, setPersonaId] = useState<number | null>(null);
-  const [observaciones, setObservaciones] = useState(desdeReserva ? (inicial.nota ?? '') : '');
+  const [documentoId, setDocumentoId] = useState<number | null>(null);
+  const [observaciones, setObservaciones] = useState('');
 
   // --- Existencia registrada hoy en el origen y el destino elegidos ---
   const [existOrigen, setExistOrigen] = useState<number | null>(null);
@@ -203,9 +205,8 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
     });
     if (problema) return problema;
 
-    // TODO: cuando exista el módulo de Documentos, adjuntar la evidencia en lugar de bloquear.
-    if (regla.evidencia === 'obligatoria') {
-      return 'Esta operación requiere evidencia y todavía no se puede adjuntar (falta el módulo de Documentos).';
+    if (regla.evidencia === 'obligatoria' && documentoId === null) {
+      return 'Adjunta la evidencia (foto o archivo).';
     }
     // TODO: solicitudes de autorización (hace falta su tabla en la base de datos).
     if (regla.requiere_autorizacion) {
@@ -232,6 +233,7 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
       motivoId,
       proveedorId: cfg.usaProveedor ? proveedorId || null : null,
       personaId: cfg.usaPersona ? personaId : null,
+      documentoId,
       observaciones,
     });
     setGuardando(false);
@@ -376,10 +378,12 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
                 />
               </Seccion>
 
-              {regla.evidencia === 'obligatoria' && (
-                <ThemedText style={{ color: colors.aviso }}>
-                  Este tipo de operación requiere evidencia. Se podrá adjuntar cuando exista el módulo de Documentos.
-                </ThemedText>
+              {regla.evidencia !== 'innecesaria' && (
+                <SelectorDocumento
+                  documentoId={documentoId}
+                  onCambio={setDocumentoId}
+                  obligatorio={regla.evidencia === 'obligatoria'}
+                />
               )}
               {regla.requiere_autorizacion && (
                 <ThemedText style={{ color: colors.aviso }}>Este tipo de operación requiere autorización.</ThemedText>

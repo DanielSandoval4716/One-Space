@@ -2,11 +2,13 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Archivo, subirArchivo, tomarFoto } from '@/archivos';
 import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -103,6 +105,7 @@ export default function NuevoProductoScreen() {
   const [unidad, setUnidad] = useState('');
   const [precio, setPrecio] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [foto, setFoto] = useState<Archivo | null>(null);
 
   async function guardarProducto() {
     if (guardando) return;
@@ -164,7 +167,7 @@ export default function NuevoProductoScreen() {
       }
 
       // Registrar producto.
-      const { error: guardarError } = await supabase
+      const { data: creado, error: guardarError } = await supabase
         .from('productos')
         .insert({
           tipo_producto_id: tipoId,
@@ -173,9 +176,17 @@ export default function NuevoProductoScreen() {
           descripcion: descripcion.trim() || null,
           unidad_medida_id: unidadData.id,
           precio: precioLeido.valor,
-        });
+        })
+        .select('id')
+        .single();
 
       if (guardarError) throw guardarError;
+
+      // Subir la fotografía y guardar su enlace en el producto.
+      if (foto && creado) {
+        const ruta = await subirArchivo('productos', `${creado.id}.jpg`, foto);
+        if (ruta) await supabase.from('productos').update({ foto_path: ruta }).eq('id', creado.id);
+      }
 
       Alert.alert(
         'Éxito',
@@ -291,17 +302,17 @@ export default function NuevoProductoScreen() {
               Fotografía del producto
             </ThemedText>
 
-            <ThemedText type="suave">
-              No se ha seleccionado una fotografía.
-            </ThemedText>
+            {foto ? (
+              <Image source={{ uri: foto.uri }} style={{ width: 160, height: 160, borderRadius: 12 }} />
+            ) : (
+              <ThemedText type="suave">No se ha seleccionado una fotografía.</ThemedText>
+            )}
 
             <TouchableOpacity
-              onPress={() =>
-                Alert.alert(
-                  'Fotografía',
-                  'Esta función se implementará posteriormente.'
-                )
-              }
+              onPress={async () => {
+                const nueva = await tomarFoto();
+                if (nueva) setFoto(nueva);
+              }}
               style={{
                 borderColor: colors.primario,
                 borderWidth: 1,
@@ -315,7 +326,7 @@ export default function NuevoProductoScreen() {
                   fontWeight: 'bold',
                 }}
               >
-                Seleccionar fotografía
+                {foto ? 'Cambiar fotografía' : 'Tomar fotografía'}
               </ThemedText>
             </TouchableOpacity>
           </ThemedCard>
