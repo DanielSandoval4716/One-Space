@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { obtenerSesion } from '@/auth';
@@ -24,6 +25,11 @@ export default function TabsLayout() {
       <NativeTabs.Trigger name="dashboard">
         <NativeTabs.Trigger.Label>Dashboard</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon md="home" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="asistente">
+        <NativeTabs.Trigger.Label>Asistente</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon md="smart_toy" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="configuracion" hidden={!puedeConfigurar}>
