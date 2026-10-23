@@ -13,6 +13,7 @@ export type DetalleConteo = {
     id: string;
     modelo: string;
     marcas: { nombre: string } | null;
+    tipos_producto: { nombre: string } | null;
     unidades_medida: { abreviatura: string } | null;
   } | null;
 };
@@ -58,11 +59,13 @@ export async function obtenerConteos(): Promise<Conteo[] | null> {
           id,
           modelo,
           marcas(nombre),
+          tipos_producto(nombre),
           unidades_medida(abreviatura)
         )
       )
     `)
-    .order('creado_en', { ascending: false });
+    .order('creado_en', { ascending: false })
+    .limit(50);
 
   if (error) {
     console.error('Error al consultar conteos:', error.message);
@@ -71,13 +74,15 @@ export async function obtenerConteos(): Promise<Conteo[] | null> {
 
   return ((data ?? []) as unknown as Conteo[]).map((c) => ({
     ...c,
-    detalles: (c.detalles ?? []).map((d) => ({
-      ...d,
-      cantidad_sistema: Number(d.cantidad_sistema),
-      cantidad_fisica:
-        d.cantidad_fisica === null ? null : Number(d.cantidad_fisica),
-      diferencia: d.diferencia === null ? null : Number(d.diferencia),
-    })),
+    detalles: (c.detalles ?? [])
+      .map((d) => ({
+        ...d,
+        cantidad_sistema: Number(d.cantidad_sistema),
+        cantidad_fisica:
+          d.cantidad_fisica === null ? null : Number(d.cantidad_fisica),
+        diferencia: d.diferencia === null ? null : Number(d.diferencia),
+      }))
+      .sort((a, b) => a.id - b.id),
   }));
 }
 
@@ -92,6 +97,9 @@ export async function crearConteo(
 
   if (error) {
     console.error('Error al iniciar conteo:', error.message);
+    if (error.message.includes('conteos_un_abierto_por_ubicacion')) {
+      return { id: null, error: 'Ya hay un conteo en progreso en esa ubicación. Confírmalo o termínalo primero.' };
+    }
     return { id: null, error: error.message };
   }
 
@@ -109,6 +117,24 @@ export async function agregarProductoConteo(
 
   if (error) {
     console.error('Error al agregar producto:', error.message);
+    if (error.message.includes('conteo_detalles_unico')) {
+      return { ok: false, error: 'Ese producto ya está incluido en el conteo.' };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function quitarProductoConteo(
+  detalleId: number
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('quitar_producto_conteo', {
+    p_detalle: detalleId,
+  });
+
+  if (error) {
+    console.error('Error al quitar producto:', error.message);
     return { ok: false, error: error.message };
   }
 
@@ -154,6 +180,41 @@ export function nombreProductoConteo(d: DetalleConteo): string {
   ].filter(Boolean).join(' ');
 
   return nombre || 'Producto desconocido';
+}
+
+// Existencia ACTUAL de varios productos en una ubicación (si no hay fila, es 0).
+export async function obtenerExistenciaActual(
+  ubicacionId: number,
+  productoIds: string[]
+): Promise<Record<string, number> | null> {
+  if (productoIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('existencias')
+    .select('producto_id, cantidad')
+    .eq('ubicacion_id', ubicacionId)
+    .in('producto_id', productoIds);
+
+  if (error) {
+    console.error('Error al leer existencias:', error.message);
+    return null;
+  }
+
+  const resultado: Record<string, number> = {};
+  for (const id of productoIds) resultado[id] = 0;
+  for (const f of (data ?? []) as { producto_id: string; cantidad: number }[]) {
+    resultado[f.producto_id] = Number(f.cantidad);
+  }
+  return resultado;
+}
+
+export function tipoProductoConteo(d: DetalleConteo): string {
+  return d.producto?.tipos_producto?.nombre ?? '';
+}
+
+// Cuántos productos del conteo ya tienen cantidad física guardada.
+export function productosContados(c: Conteo): number {
+  return c.detalles.filter((d) => d.cantidad_fisica !== null).length;
 }
 
 export function ubicacionConteo(c: Conteo): string {

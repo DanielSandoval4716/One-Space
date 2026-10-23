@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,8 @@ import { useTheme } from '@/theme';
 export default function AjusteNuevo() {
   const router = useRouter();
   const colors = useTheme();
+  // Si se llega desde un conteo, el formulario viene con producto, ubicación y cantidad real.
+  const params = useLocalSearchParams<{ producto?: string; ubicacion?: string; real?: string }>();
 
   // Datos que vienen de la base de datos
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -69,6 +71,16 @@ export default function AjusteNuevo() {
       setUbicaciones(ubic);
       setMotivos(mot);
       setRegla(reg);
+
+      const ubicPrevia = Number(params.ubicacion);
+      const productoPrevio = prod.find((x) => x.id === params.producto) ?? null;
+      if (productoPrevio && ubic.some((x) => x.id === ubicPrevia)) {
+        setProducto(productoPrevio);
+        setUbicacionId(ubicPrevia);
+        setExistencia(await obtenerExistencia(productoPrevio.id, ubicPrevia));
+        if (params.real !== undefined) setCantidadReal(params.real);
+      }
+
       setCargando(false);
     }
     cargar();
