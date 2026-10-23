@@ -1,13 +1,14 @@
 import { supabase } from "@/supabase";
 
-// Listas que usan los formularios de inventario (ajustes, reservas...).
 
 export type ProductoOpcion = {
   id: string;
-  nombre: string; // "Marca Modelo"
+  nombre: string; 
   tipo: string;
-  unidad: string; // abreviatura
-  total: number; // existencia total en todas las ubicaciones
+  unidad: string; 
+  total: number; 
+  reservado: number; 
+  disponible: number; 
 };
 
 type FilaProducto = {
@@ -25,24 +26,38 @@ export async function obtenerProductosOpcion(): Promise<ProductoOpcion[]> {
       .select("id, modelo, marcas(nombre), tipos_producto(nombre), unidades_medida(abreviatura)")
       .eq("activo", true)
       .order("modelo"),
-    supabase.from("existencias_por_producto").select("producto_id, total"),
+    supabase.from("existencias_disponibles").select("producto_id, total, reservado, disponible"),
   ]);
   for (const r of [prod, exist]) {
     if (r.error) console.log(r.error.message);
   }
 
-  const totales = new Map<string, number>();
-  for (const e of (exist.data ?? []) as { producto_id: string; total: number }[]) {
-    totales.set(e.producto_id, Number(e.total));
+  const cifras = new Map<string, { total: number; reservado: number; disponible: number }>();
+  for (const e of (exist.data ?? []) as {
+    producto_id: string;
+    total: number;
+    reservado: number;
+    disponible: number;
+  }[]) {
+    cifras.set(e.producto_id, {
+      total: Number(e.total),
+      reservado: Number(e.reservado),
+      disponible: Number(e.disponible),
+    });
   }
 
-  return ((prod.data ?? []) as unknown as FilaProducto[]).map((p) => ({
-    id: p.id,
-    nombre: [p.marcas?.nombre, p.modelo].filter(Boolean).join(" "),
-    tipo: p.tipos_producto?.nombre ?? "",
-    unidad: p.unidades_medida?.abreviatura ?? "",
-    total: totales.get(p.id) ?? 0,
-  }));
+  return ((prod.data ?? []) as unknown as FilaProducto[]).map((p) => {
+    const c = cifras.get(p.id);
+    return {
+      id: p.id,
+      nombre: [p.marcas?.nombre, p.modelo].filter(Boolean).join(" "),
+      tipo: p.tipos_producto?.nombre ?? "",
+      unidad: p.unidades_medida?.abreviatura ?? "",
+      total: c?.total ?? 0,
+      reservado: c?.reservado ?? 0,
+      disponible: c?.disponible ?? 0,
+    };
+  });
 }
 
 export type UbicacionOpcion = { id: number; nombre: string; bodega: string };
@@ -65,7 +80,6 @@ export async function obtenerUbicacionesOpcion(): Promise<UbicacionOpcion[]> {
     .sort((a, b) => a.bodega.localeCompare(b.bodega) || a.nombre.localeCompare(b.nombre));
 }
 
-// Cantidad registrada de un producto en una ubicación (0 si nunca ha tenido)
 export async function obtenerExistencia(productoId: string, ubicacionId: number) {
   const { data, error } = await supabase
     .from("existencias")
@@ -77,9 +91,33 @@ export async function obtenerExistencia(productoId: string, ubicacionId: number)
   return Number(data?.cantidad ?? 0);
 }
 
+export type ExistenciaUbicacion = { ubicacionId: number; texto: string; cantidad: number };
+
+export async function obtenerExistenciasProducto(productoId: string): Promise<ExistenciaUbicacion[]> {
+  const { data, error } = await supabase
+    .from("existencias")
+    .select("ubicacion_id, cantidad, ubicaciones(nombre, bodegas(nombre))")
+    .eq("producto_id", productoId)
+    .gt("cantidad", 0);
+  if (error) console.log(error.message);
+
+  const filas = (data ?? []) as unknown as {
+    ubicacion_id: number;
+    cantidad: number;
+    ubicaciones: { nombre: string; bodegas: { nombre: string } | null } | null;
+  }[];
+
+  return filas.map((f) => ({
+    ubicacionId: f.ubicacion_id,
+    texto: f.ubicaciones
+      ? `${f.ubicaciones.bodegas?.nombre ?? ""} › ${f.ubicaciones.nombre}`
+      : String(f.ubicacion_id),
+    cantidad: Number(f.cantidad),
+  }));
+}
+
 export type MotivoOpcion = { id: number; nombre: string };
 
-// aplica_a: entrada, salida, transferencia, ajuste o reserva
 export async function obtenerMotivos(aplicaA: string) {
   const { data, error } = await supabase
     .from("motivos")
@@ -117,7 +155,6 @@ export async function obtenerPersonasOpcion() {
   return (data ?? []) as PersonaOpcion[];
 }
 
-// Convierte el texto de un campo ("23", "2,5") en número. null si no es válido.
 export function leerCantidad(texto: string): number | null {
   const limpio = texto.trim().replace(",", ".");
   if (limpio === "") return null;

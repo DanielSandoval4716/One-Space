@@ -1,14 +1,22 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  SolicitudAjuste,
+  nombreProductoSolicitud,
+  obtenerSolicitudes,
+  resolverSolicitud,
+  textoUbicacionSolicitud,
+} from '@/ajustes';
 import { obtenerSesion } from '@/auth';
 import { ThemedButton } from '@/components/ThemedButton';
+import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { MovimientoCard } from '@/components/movimientos/MovimientoCard';
-import { Movimiento, obtenerMovimientos } from '@/movimientos';
+import { Movimiento, formatearFechaHora, obtenerMovimientos } from '@/movimientos';
 import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
 import { useTheme } from '@/theme';
 
@@ -18,7 +26,9 @@ export default function Ajustes() {
 
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [lista, setLista] = useState<Movimiento[]>([]);
+  const [solicitudes, setSolicitudes] = useState<SolicitudAjuste[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [procesando, setProcesando] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const cargar = useCallback(async () => {
@@ -36,8 +46,9 @@ export default function Ajustes() {
       setError('No se pudieron cargar los ajustes.');
     } else {
       setError('');
-      setLista(datos);
+      setLista(movimientos);
     }
+    setSolicitudes(pedidos ?? []);
     setCargando(false);
   }, []);
 
@@ -46,6 +57,31 @@ export default function Ajustes() {
       cargar();
     }, [cargar])
   );
+
+  const puedeAutorizar = puedeVer(perfil, ['inventario.autorizar_ajuste']);
+
+  function resolver(s: SolicitudAjuste, aprobar: boolean) {
+    const mensaje = aprobar
+      ? `Se ajustará ${nombreProductoSolicitud(s)} a ${s.cantidad_real}.`
+      : 'La solicitud se marcará como rechazada.';
+
+    Alert.alert(aprobar ? 'Aprobar ajuste' : 'Rechazar ajuste', mensaje, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: aprobar ? 'Aprobar' : 'Rechazar',
+        style: aprobar ? 'default' : 'destructive',
+        onPress: async () => {
+          setProcesando(s.id);
+          const resultado = await resolverSolicitud(s.id, aprobar);
+          setProcesando(null);
+          if (!resultado.ok) {
+            Alert.alert('No se pudo completar', resultado.error ?? 'Intenta de nuevo.');
+          }
+          cargar();
+        },
+      },
+    ]);
+  }
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -96,7 +132,7 @@ export default function Ajustes() {
               movimiento={m}
               onPress={() =>
                 router.push({
-                  pathname: '/movimiento-detalle' as never,
+                  pathname: '/movimiento-detalle',
                   params: { id: String(m.id) },
                 })
               }
