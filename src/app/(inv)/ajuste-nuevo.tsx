@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,16 +13,16 @@ import { ThemedView } from '@/components/ThemedView';
 import { Opciones } from '@/components/inventario/Opciones';
 import { SelectorProducto } from '@/components/inventario/SelectorProducto';
 import {
-    MotivoOpcion,
-    ProductoOpcion,
-    ReglaOperacion,
-    UbicacionOpcion,
-    leerCantidad,
-    obtenerExistencia,
-    obtenerMotivos,
-    obtenerProductosOpcion,
-    obtenerRegla,
-    obtenerUbicacionesOpcion,
+  MotivoOpcion,
+  ProductoOpcion,
+  ReglaOperacion,
+  UbicacionOpcion,
+  leerCantidad,
+  obtenerExistencia,
+  obtenerMotivos,
+  obtenerProductosOpcion,
+  obtenerRegla,
+  obtenerUbicacionesOpcion,
 } from '@/opcionesInventario';
 import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
 import { useTheme } from '@/theme';
@@ -30,6 +30,8 @@ import { useTheme } from '@/theme';
 export default function AjusteNuevo() {
   const router = useRouter();
   const colors = useTheme();
+  // Si se llega desde un conteo, el formulario viene con producto, ubicación y cantidad real.
+  const params = useLocalSearchParams<{ producto?: string; ubicacion?: string; real?: string }>();
 
   // Datos que vienen de la base de datos
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -69,12 +71,21 @@ export default function AjusteNuevo() {
       setUbicaciones(ubic);
       setMotivos(mot);
       setRegla(reg);
+
+      const ubicPrevia = Number(params.ubicacion);
+      const productoPrevio = prod.find((x) => x.id === params.producto) ?? null;
+      if (productoPrevio && ubic.some((x) => x.id === ubicPrevia)) {
+        setProducto(productoPrevio);
+        setUbicacionId(ubicPrevia);
+        setExistencia(await obtenerExistencia(productoPrevio.id, ubicPrevia));
+        if (params.real !== undefined) setCantidadReal(params.real);
+      }
+
       setCargando(false);
     }
     cargar();
   }, []);
 
-  // Cada vez que cambia el producto o la ubicación se lee la existencia registrada
   async function leerExistencia(p: ProductoOpcion | null, u: number | null) {
     if (p && u !== null) setExistencia(await obtenerExistencia(p.id, u));
     else setExistencia(null);
@@ -94,11 +105,10 @@ export default function AjusteNuevo() {
   const diferencia = existencia !== null && real !== null ? real - existencia : null;
   const unidad = producto?.unidad ?? '';
 
-  // Si la regla pide autorización y el usuario no puede autorizar, solo la solicita
   const necesitaAutorizacion =
     regla.requiere_autorizacion && !puedeVer(perfil, ['inventario.autorizar_ajuste']);
 
-  async function confirmar() {
+    async function confirmar() {
     if (!producto) return setError('Selecciona un producto.');
     if (ubicacionId === null) return setError('Selecciona la ubicación.');
     if (real === null || real < 0) return setError('Escribe la cantidad real encontrada (0 o más).');
@@ -108,7 +118,6 @@ export default function AjusteNuevo() {
     const datos: DatosAjuste = {
       productoId: producto.id,
       ubicacionId,
-      cantidadAnterior: existencia ?? 0,
       cantidadReal: real,
       motivoId,
       observaciones,
@@ -122,15 +131,13 @@ export default function AjusteNuevo() {
     setGuardando(false);
 
     if (!resultado.ok) {
-      setError(resultado.error ?? 'No se pudo guardar el ajuste. Revisa que tengas permiso.');
+      setError(resultado.error ?? 'No se pudo guardar el ajuste.');
       return;
     }
 
     const mensaje = necesitaAutorizacion
-      ? 'Solicitud simulada: todavía no se guarda en el servidor.'
-      : resultado.simulado
-        ? 'Ajuste simulado: todavía no se guardó en la base de datos.'
-        : 'Ajuste registrado.';
+      ? 'Solicitud enviada. Un administrador debe autorizarla antes de modificar las existencias.'
+      : 'Ajuste registrado.';
     Alert.alert('Ajuste', mensaje, [{ text: 'OK', onPress: () => router.back() }]);
   }
 
@@ -184,7 +191,7 @@ export default function AjusteNuevo() {
                 />
               </ThemedCard>
 
-              {/* Revisión de la diferencia */}
+              
               {existencia !== null && (
                 <ThemedCard style={{ gap: 6 }}>
                   <ThemedText style={{ fontWeight: 'bold' }}>Diferencia</ThemedText>
@@ -227,7 +234,6 @@ export default function AjusteNuevo() {
 
               {regla.evidencia === 'obligatoria' && (
                 <ThemedText style={{ color: colors.aviso }}>
-                  {/* TODO: adjuntar evidencia cuando exista el módulo de Documentos */}
                    Este tipo de ajuste requiere evidencia. Podrás adjuntarla cuando exista el módulo de Documentos.
                 </ThemedText>
               )}

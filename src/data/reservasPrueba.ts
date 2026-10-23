@@ -1,7 +1,4 @@
-// Datos de prueba de Reservas (se pierden al cerrar la app).
-// TODO: reemplazar por Supabase cuando exista la tabla de reservas.
-
-export type EstadoReserva = 'activa' | 'cancelada' | 'convertida';
+export type EstadoReserva = "activa" | "cancelada" | "convertida";
 
 export type Reserva = {
   id: number;
@@ -21,22 +18,32 @@ export const reservasPrueba: Reserva[] = [];
 // exceptoReservaId: no cuenta esa reserva (sirve al convertirla en salida).
 export function reservadoDe(productoId: string, exceptoReservaId?: number) {
   return reservasPrueba
-    .filter((r) => r.estado === 'activa' && r.productoId === productoId && r.id !== exceptoReservaId)
+    .filter(
+      (r) =>
+        r.estado === "activa" &&
+        r.productoId === productoId &&
+        r.id !== exceptoReservaId,
+    )
     .reduce((suma, r) => suma + r.cantidad, 0);
 }
 
-export function crearReserva(datos: Omit<Reserva, 'id' | 'fecha' | 'estado'>) {
+export function crearReserva(datos: Omit<Reserva, "id" | "fecha" | "estado">) {
   const id = reservasPrueba.reduce((max, r) => Math.max(max, r.id), 0) + 1;
-  reservasPrueba.push({ ...datos, id, fecha: new Date().toISOString(), estado: 'activa' });
+  reservasPrueba.push({
+    ...datos,
+    id,
+    fecha: new Date().toISOString(),
+    estado: "activa",
+  });
 }
 
 // Marca la reserva como convertida en salida (se llama después de registrar la salida).
 export function convertirReserva(id: number) {
   const reserva = reservasPrueba.find((r) => r.id === id);
-  if (reserva && reserva.estado === 'activa') reserva.estado = 'convertida';
+  if (reserva && reserva.estado === "activa") reserva.estado = "convertida";
 }
 
 export function cancelarReserva(id: number) {
   const reserva = reservasPrueba.find((r) => r.id === id);
-  if (reserva && reserva.estado === 'activa') reserva.estado = 'cancelada';
+  if (reserva && reserva.estado === "activa") reserva.estado = "cancelada";
 }

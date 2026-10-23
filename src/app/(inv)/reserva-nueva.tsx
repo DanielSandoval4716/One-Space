@@ -11,15 +11,15 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Opciones } from '@/components/inventario/Opciones';
 import { SelectorProducto } from '@/components/inventario/SelectorProducto';
-import { crearReserva, reservadoDe } from '@/data/reservasPrueba';
 import {
-    PersonaOpcion,
-    ProductoOpcion,
-    leerCantidad,
-    obtenerPersonasOpcion,
-    obtenerProductosOpcion,
+  PersonaOpcion,
+  ProductoOpcion,
+  leerCantidad,
+  obtenerPersonasOpcion,
+  obtenerProductosOpcion,
 } from '@/opcionesInventario';
 import { Perfil, obtenerPerfil, puedeVer } from '@/permisos';
+import { crearReserva } from '@/reservas';
 import { useTheme } from '@/theme';
 
 export default function ReservaNueva() {
@@ -36,6 +36,7 @@ export default function ReservaNueva() {
   const [responsableId, setResponsableId] = useState<number | null>(null);
   const [motivo, setMotivo] = useState('');
   const [error, setError] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     async function cargar() {
@@ -59,11 +60,11 @@ export default function ReservaNueva() {
   }, []);
 
   // Existencia = lo que hay físicamente. Disponible = existencia - reservado.
-  const reservado = producto ? reservadoDe(producto.id) : 0;
-  const disponible = producto ? producto.total - reservado : 0;
+  // Los tres números vienen de la base de datos.
   const unidad = producto?.unidad ?? '';
+  const disponible = producto?.disponible ?? 0;
 
-  function confirmar() {
+  async function confirmar() {
     const n = leerCantidad(cantidad);
 
     if (!producto) return setError('Selecciona un producto.');
@@ -71,15 +72,20 @@ export default function ReservaNueva() {
     if (n > disponible) return setError(`Solo hay ${disponible} ${unidad} disponibles para reservar.`);
     if (motivo.trim() === '') return setError('Indica el destino o el motivo de la reserva.');
 
-    // TODO: guardar en Supabase y registrar la operación en Auditoría.
-    crearReserva({
+    setError('');
+    setGuardando(true);
+    const resultado = await crearReserva({
       productoId: producto.id,
-      producto: producto.nombre,
-      unidad,
       cantidad: n,
-      responsable: personas.find((p) => p.id === responsableId)?.nombre ?? '',
       motivo: motivo.trim(),
+      personaId: responsableId,
     });
+    setGuardando(false);
+
+    if (!resultado.ok) {
+      setError(resultado.error ?? 'No se pudo crear la reserva.');
+      return;
+    }
 
     Alert.alert('Reserva', 'Reserva creada.', [{ text: 'OK', onPress: () => router.back() }]);
   }
@@ -118,7 +124,7 @@ export default function ReservaNueva() {
                     Existencia: {producto.total} {unidad}
                   </ThemedText>
                   <ThemedText type="suave">
-                    Reservadas: {reservado} {unidad}
+                    Reservadas: {producto.reservado} {unidad}
                   </ThemedText>
                   <ThemedText style={{ fontSize: 22, fontWeight: 'bold', color: colors.primario }}>
                     Disponibles: {disponible} {unidad}
@@ -157,7 +163,7 @@ export default function ReservaNueva() {
 
               {error !== '' && <ThemedText type="error">{error}</ThemedText>}
 
-              <ThemedButton titulo="Confirmar reserva" onPress={confirmar} />
+              <ThemedButton titulo="Confirmar reserva" onPress={confirmar} cargando={guardando} />
             </>
           )}
         </ScrollView>

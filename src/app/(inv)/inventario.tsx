@@ -31,6 +31,12 @@ const secciones: { titulo: string; descripcion: string; ruta?: Href; permisos?: 
     ruta: '/reservas' as Href,
     permisos: ['inventario.reserva'],
   },
+  {
+    titulo: 'Conteos',
+    descripcion: 'Realizar conteos físicos y revisar diferencias.',
+    ruta: '/conteos' as Href,
+    permisos: ['conteos.realizar'],
+  },
 ];
 
 export default function Inventario() {
