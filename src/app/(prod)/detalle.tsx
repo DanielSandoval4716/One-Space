@@ -16,6 +16,7 @@ import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { FotoYQR } from '@/components/productos/FotoYQR';
 import { obtenerPerfil, puedeVer } from '@/permisos';
 import { formatearPrecio, leerPrecio, MONEDA } from '@/precios';
 import { supabase } from '@/supabase';
@@ -185,17 +186,7 @@ export default function DetalleProductoScreen() {
                 Detalle del producto
               </ThemedText>
 
-              <ThemedCard
-                style={{
-                  height: 180,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <ThemedText type="suave">
-                  Imagen del producto no disponible
-                </ThemedText>
-              </ThemedCard>
+              <FotoYQR productoId={producto.id} />
 
               <ThemedCard style={{ gap: 12 }}>
                 <ThemedText

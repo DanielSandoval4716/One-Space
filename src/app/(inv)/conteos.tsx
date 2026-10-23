@@ -1,4 +1,6 @@
 import { obtenerSesion } from '@/auth';
+import { EscanerQR } from '@/components/EscanerQR';
+import { idDeProductoPorQR } from '@/qr';
 import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -68,6 +70,7 @@ export default function Conteos() {
   const [observaciones, setObservaciones] = useState('');
   const [cantidades, setCantidades] = useState<Record<number, string>>({});
   const [busqueda, setBusqueda] = useState('');
+  const [escaneando, setEscaneando] = useState(false);
   const [error, setError] = useState('');
   // Existencia actual (por producto) del conteo finalizado que se está viendo
   const [actuales, setActuales] = useState<Record<string, number> | null>(null);
@@ -529,6 +532,19 @@ export default function Conteos() {
                   <ThemedText style={{ fontSize: 17, fontWeight: 'bold' }}>
                     Agregar producto
                   </ThemedText>
+
+                  <ThemedButton titulo="Escanear QR" onPress={() => setEscaneando(true)} />
+                  <EscanerQR
+                    visible={escaneando}
+                    onCerrar={() => setEscaneando(false)}
+                    onLeido={async (texto) => {
+                      setEscaneando(false);
+                      const id = await idDeProductoPorQR(texto);
+                      const p = productos.find((x) => x.id === id);
+                      if (p) agregarProducto(p);
+                      else Alert.alert('QR no reconocido', 'Ese código no es de un producto.');
+                    }}
+                  />
 
                   <ThemedInput
                     placeholder="Buscar por tipo, marca o modelo"

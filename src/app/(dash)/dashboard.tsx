@@ -17,7 +17,7 @@ const modulos: { titulo: string; ruta?: Href; permisos?: string[] }[] = [
   { titulo: 'Bodegas', ruta: '/bodegas' },
   { titulo: 'Movimientos', ruta: '/movimientos' },
 { titulo: 'Conteos', ruta: '/conteos', permisos: ['conteos.realizar'] },  { titulo: 'Directorio', ruta: '/directorio', permisos: ['proveedores.gestionar', 'personas.gestionar'] },
-  { titulo: 'Documentos' }, // TODO: pantalla Documentos (archivos y evidencias)
+  { titulo: 'Documentos', ruta: '/documentos' },
   { titulo: 'Reportes', permisos: ['reportes.ver'] }, // TODO: pantalla Reportes
   { titulo: 'Auditoría', permisos: ['auditoria.ver'] }, // TODO: pantalla Auditoría
 ];

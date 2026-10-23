@@ -2,12 +2,15 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EscanerQR } from '@/components/EscanerQR';
+import { idDeProductoPorQR } from '@/qr';
 import { ThemedButton } from '@/components/ThemedButton';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
@@ -47,6 +50,7 @@ function obtenerNombre(
 export default function ProductosScreen() {
   const router = useRouter();
   const colors = useTheme();
+  const [escaneando, setEscaneando] = useState(false);
 
   const [busqueda, setBusqueda] = useState('');
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -164,6 +168,18 @@ export default function ProductosScreen() {
               Consulta los productos registrados en One Space.
             </ThemedText>
           </View>
+
+          <ThemedButton titulo="Escanear QR" onPress={() => setEscaneando(true)} />
+          <EscanerQR
+            visible={escaneando}
+            onCerrar={() => setEscaneando(false)}
+            onLeido={async (texto) => {
+              setEscaneando(false);
+              const id = await idDeProductoPorQR(texto);
+              if (id) router.push({ pathname: '/detalle', params: { id } });
+              else Alert.alert('QR no reconocido', 'Ese código no es de un producto.');
+            }}
+          />
 
           <ThemedInput
             placeholder="Buscar por tipo, marca o modelo..."
