@@ -12,10 +12,10 @@ import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { leerPrecio, MONEDA } from '@/precios';
 import { supabase } from '@/supabase';
 import { useTheme } from '@/theme';
 
-// Mostrar una confirmación y esperar la respuesta.
 function confirmarCreacion(nombre: string): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
@@ -39,7 +39,6 @@ function confirmarCreacion(nombre: string): Promise<boolean> {
   });
 }
 
-// Buscar un tipo o marca y crearlo con confirmación.
 async function buscarOCrear(
   tabla: 'tipos_producto' | 'marcas',
   nombre: string
@@ -72,8 +71,6 @@ async function buscarOCrear(
     .single();
 
   if (errorInsertar) {
-    // Si otro usuario lo creó mientras confirmábamos,
-    // intentamos encontrarlo nuevamente.
     const { data: repetidos, error: errorBuscar } = await supabase
       .from(tabla)
       .select('id, nombre')
@@ -104,6 +101,7 @@ export default function NuevoProductoScreen() {
   const [modelo, setModelo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [unidad, setUnidad] = useState('');
+  const [precio, setPrecio] = useState('');
   const [guardando, setGuardando] = useState(false);
 
   async function guardarProducto() {
@@ -117,10 +115,15 @@ export default function NuevoProductoScreen() {
       return;
     }
 
+    const precioLeido = leerPrecio(precio);
+    if (!precioLeido.ok) {
+      Alert.alert('Aviso', 'Ingresa un precio válido (número mayor o igual a 0).');
+      return;
+    }
+
     setGuardando(true);
 
     try {
-      // Verificar o crear el tipo de producto.
       const tipoId = await buscarOCrear(
         'tipos_producto',
         tipo
@@ -128,7 +131,6 @@ export default function NuevoProductoScreen() {
 
       if (tipoId === null) return;
 
-      // Verificar o crear la marca.
       let marcaId: number | string | null = null;
 
       if (marca.trim()) {
@@ -137,7 +139,6 @@ export default function NuevoProductoScreen() {
         if (marcaId === null) return;
       }
 
-      // Buscar unidad de medida.
       const nombreUnidad = unidad.trim() || 'Unidad';
 
       const { data: unidades, error: unidadError } =
@@ -171,6 +172,7 @@ export default function NuevoProductoScreen() {
           modelo: modelo.trim(),
           descripcion: descripcion.trim() || null,
           unidad_medida_id: unidadData.id,
+          precio: precioLeido.valor,
         });
 
       if (guardarError) throw guardarError;
@@ -264,6 +266,14 @@ export default function NuevoProductoScreen() {
               placeholder="Ej. Unidad"
               value={unidad}
               onChangeText={setUnidad}
+            />
+
+            <ThemedText>Precio unitario (opcional)</ThemedText>
+            <ThemedInput
+              placeholder={`Ej. ${MONEDA} 125.50`}
+              value={precio}
+              onChangeText={setPrecio}
+              keyboardType="decimal-pad"
             />
           </ThemedCard>
 

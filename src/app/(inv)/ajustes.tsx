@@ -41,13 +41,8 @@ export default function Ajustes() {
 
     setPerfil(await obtenerPerfil(session.user.id));
 
-    // Los ajustes realizados son movimientos de tipo "ajuste"
-    const [movimientos, pedidos] = await Promise.all([
-      obtenerMovimientos({ tipo: 'ajuste', limite: 50 }),
-      obtenerSolicitudes(),
-    ]);
-
-    if (movimientos === null) {
+    const datos = await obtenerMovimientos({ tipo: 'ajuste', limite: 50 });
+    if (datos === null) {
       setError('No se pudieron cargar los ajustes.');
     } else {
       setError('');
@@ -110,71 +105,21 @@ export default function Ajustes() {
             <ThemedButton titulo="+ Nuevo ajuste" onPress={() => router.push('/ajuste-nuevo')} />
           )}
 
-          {/* Quien puede autorizar ve todas las solicitudes; los demás solo las suyas */}
-          {solicitudes.length > 0 && (
-            <View style={{ gap: 12 }}>
-              <ThemedText style={{ fontSize: 18, fontWeight: 'bold' }}>
-                {puedeAutorizar ? 'Solicitudes de ajuste' : 'Mis solicitudes'}
+          {puedeVer(perfil, ['productos.gestionar']) && (
+            <TouchableOpacity
+              onPress={() => router.push('/ajuste-precio' as never)}
+              style={{
+                borderColor: colors.primario,
+                borderWidth: 1,
+                padding: 14,
+                borderRadius: 12,
+                alignItems: 'center',
+              }}
+            >
+              <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>
+                Ajustar precio de un producto
               </ThemedText>
-
-              {solicitudes.map((s) => {
-                const diferencia = s.cantidad_real - s.cantidad_anterior;
-                const unidad = s.producto?.unidades_medida?.abreviatura ?? '';
-                const colorEstado =
-                  s.estado === 'pendiente' ? colors.aviso : s.estado === 'aprobada' ? colors.exito : colors.error;
-
-                return (
-                  <ThemedCard key={s.id} style={{ gap: 6 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-                      <ThemedText style={{ fontSize: 18, fontWeight: 'bold', flexShrink: 1 }}>
-                        {nombreProductoSolicitud(s)}
-                      </ThemedText>
-                      <ThemedText style={{ fontWeight: 'bold', color: colorEstado }}>
-                        {s.estado === 'pendiente' ? 'Pendiente' : s.estado === 'aprobada' ? 'Aprobada' : 'Rechazada'}
-                      </ThemedText>
-                    </View>
-
-                    <ThemedText type="suave">{textoUbicacionSolicitud(s)}</ThemedText>
-                    <ThemedText>
-                      Registrado: {s.cantidad_anterior} → Real: {s.cantidad_real} {unidad} (
-                      {diferencia > 0 ? '+' : diferencia < 0 ? '−' : ''}
-                      {Math.abs(diferencia)})
-                    </ThemedText>
-                    <ThemedText type="suave">Motivo: {s.motivo?.nombre ?? '—'}</ThemedText>
-                    {s.observaciones && <ThemedText type="suave">{s.observaciones}</ThemedText>}
-                    <ThemedText type="suave">
-                      {s.solicitante ?? 'Alguien'} · {formatearFechaHora(s.solicitada_en)}
-                    </ThemedText>
-
-                    {s.estado === 'aprobada' && s.movimiento_id !== null && (
-                      <TouchableOpacity
-                        onPress={() =>
-                          router.push({
-                            pathname: '/movimiento-detalle',
-                            params: { id: String(s.movimiento_id) },
-                          })
-                        }
-                      >
-                        <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>
-                          Ver movimiento →
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-
-                    {s.estado === 'pendiente' && puedeAutorizar && (
-                      <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-                        <TouchableOpacity disabled={procesando === s.id} onPress={() => resolver(s, true)}>
-                          <ThemedText style={{ color: colors.exito, fontWeight: 'bold' }}>Aprobar</ThemedText>
-                        </TouchableOpacity>
-                        <TouchableOpacity disabled={procesando === s.id} onPress={() => resolver(s, false)}>
-                          <ThemedText style={{ color: colors.error, fontWeight: 'bold' }}>Rechazar</ThemedText>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </ThemedCard>
-                );
-              })}
-            </View>
+            </TouchableOpacity>
           )}
 
           <ThemedText style={{ fontSize: 18, fontWeight: 'bold' }}>Ajustes registrados</ThemedText>
