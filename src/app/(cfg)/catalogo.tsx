@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
@@ -13,6 +15,7 @@ import { CATALOGOS, Elemento, borrarElemento, guardarElemento, obtenerCatalogo }
 import { useTheme } from '@/theme';
 
 export default function Catalogo() {
+  const permitido = usePermiso(['configuracion.gestionar']);
   const colors = useTheme();
   const { tabla } = useLocalSearchParams<{ tabla: string }>();
   const config = CATALOGOS[tabla];
@@ -101,6 +104,8 @@ export default function Catalogo() {
       .filter(Boolean)
       .join(' · ');
   }
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>

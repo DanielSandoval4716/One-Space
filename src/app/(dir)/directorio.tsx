@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
@@ -17,6 +19,7 @@ const PESTANAS: { tipo: TipoContacto; titulo: string }[] = [
 ];
 
 export default function DirectorioScreen() {
+  const permitido = usePermiso(['proveedores.gestionar', 'personas.gestionar']);
   const router = useRouter();
   const colors = useTheme();
   const [pestana, setPestana] = useState<TipoContacto>('proveedor');
@@ -57,6 +60,8 @@ export default function DirectorioScreen() {
       params: id ? { tipo, id: String(id) } : { tipo },
     });
   }
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>

@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Switch, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +14,7 @@ import { useTheme } from '@/theme';
 type Edicion = { id?: number; nombre: string; descripcion: string; permisos: string[]; protegido: boolean };
 
 export default function Roles() {
+  const permitido = usePermiso(['configuracion.gestionar']);
   const colors = useTheme();
   const [roles, setRoles] = useState<Rol[]>([]);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
@@ -87,6 +90,8 @@ export default function Roles() {
       },
     ]);
   }
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>

@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -95,6 +97,7 @@ async function buscarOCrear(
 }
 
 export default function NuevoProductoScreen() {
+  const permitido = usePermiso(['productos.gestionar']);
   const router = useRouter();
   const colors = useTheme();
 
@@ -104,6 +107,7 @@ export default function NuevoProductoScreen() {
   const [descripcion, setDescripcion] = useState('');
   const [unidad, setUnidad] = useState('');
   const [precio, setPrecio] = useState('');
+  const [stockMinimo, setStockMinimo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [foto, setFoto] = useState<Archivo | null>(null);
 
@@ -121,6 +125,12 @@ export default function NuevoProductoScreen() {
     const precioLeido = leerPrecio(precio);
     if (!precioLeido.ok) {
       Alert.alert('Aviso', 'Ingresa un precio válido (número mayor o igual a 0).');
+      return;
+    }
+
+    const stockLeido = stockMinimo.trim() === '' ? 0 : Number(stockMinimo.trim().replace(',', '.'));
+    if (!Number.isFinite(stockLeido) || stockLeido < 0) {
+      Alert.alert('Aviso', 'El stock mínimo debe ser un número mayor o igual a 0.');
       return;
     }
 
@@ -176,6 +186,7 @@ export default function NuevoProductoScreen() {
           descripcion: descripcion.trim() || null,
           unidad_medida_id: unidadData.id,
           precio: precioLeido.valor,
+          stock_minimo: stockLeido,
         })
         .select('id')
         .single();
@@ -207,6 +218,8 @@ export default function NuevoProductoScreen() {
       setGuardando(false);
     }
   }
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -284,6 +297,14 @@ export default function NuevoProductoScreen() {
               placeholder={`Ej. ${MONEDA} 125.50`}
               value={precio}
               onChangeText={setPrecio}
+              keyboardType="decimal-pad"
+            />
+
+            <ThemedText>Stock mínimo (opcional)</ThemedText>
+            <ThemedInput
+              placeholder="Avisar cuando queden menos de... Ej. 5"
+              value={stockMinimo}
+              onChangeText={setStockMinimo}
               keyboardType="decimal-pad"
             />
           </ThemedCard>

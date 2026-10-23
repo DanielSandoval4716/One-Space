@@ -16,6 +16,7 @@ import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { ProductoCard } from '@/components/productos/ProductoCard';
+import { usePermiso } from '@/permisos';
 import { supabase } from '@/supabase';
 import { useTheme } from '@/theme';
 
@@ -51,6 +52,7 @@ export default function ProductosScreen() {
   const router = useRouter();
   const colors = useTheme();
   const [escaneando, setEscaneando] = useState(false);
+  const puedeCrear = usePermiso(['productos.gestionar']) === true;
 
   const [busqueda, setBusqueda] = useState('');
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -187,10 +189,12 @@ export default function ProductosScreen() {
             onChangeText={setBusqueda}
           />
 
-          <ThemedButton
-            titulo="+ Nuevo producto"
-            onPress={() => router.push('/nuevo')}
-          />
+          {puedeCrear && (
+            <ThemedButton
+              titulo="+ Nuevo producto"
+              onPress={() => router.push('/nuevo')}
+            />
+          )}
 
           <ThemedText
             style={{

@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { obtenerSesion } from "@/auth";
 import { supabase } from "@/supabase";
 
 export type Perfil = { nombre: string; rol: string; permisos: string[] };
@@ -27,4 +29,20 @@ export function puedeVer(perfil: Perfil | null, permisos?: string[]) {
   if (!perfil) return false;
   if (!permisos) return true;
   return permisos.some((p) => perfil.permisos.includes(p));
+}
+
+
+// Hook para pantallas: true si el usuario tiene alguno de los permisos,
+// false si no, y null mientras se consulta.
+export function usePermiso(permisos: string[]): boolean | null {
+  const [permitido, setPermitido] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    obtenerSesion().then(async (session) => {
+      const perfil = session ? await obtenerPerfil(session.user.id) : null;
+      setPermitido(puedeVer(perfil, permisos));
+    });
+  }, []);
+
+  return permitido;
 }

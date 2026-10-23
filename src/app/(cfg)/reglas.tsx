@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useEffect, useState } from 'react';
 import { ScrollView, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +26,7 @@ const EVIDENCIAS = [
 ];
 
 export default function Reglas() {
+  const permitido = usePermiso(['configuracion.gestionar']);
   const colors = useTheme();
   const [reglas, setReglas] = useState<Regla[]>([]);
   const [error, setError] = useState('');
@@ -45,6 +48,8 @@ export default function Reglas() {
     setError('');
     cargar();
   }
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>

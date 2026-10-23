@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useEffect, useState } from 'react';
 import { ScrollView, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +17,7 @@ import { useTheme } from '@/theme';
 const formVacio = { nombre: '', email: '', password: '', rol_id: '' };
 
 export default function Usuarios() {
+  const permitido = usePermiso(['configuracion.gestionar']);
   const colors = useTheme();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<Rol[]>([]);
@@ -77,6 +80,8 @@ export default function Usuarios() {
     setError('');
     cargar();
   }
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>

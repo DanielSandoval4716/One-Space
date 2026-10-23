@@ -47,6 +47,8 @@ export default function DetalleProductoScreen() {
   const [editando, setEditando] = useState(false);
   const [textoPrecio, setTextoPrecio] = useState('');
   const [guardandoPrecio, setGuardandoPrecio] = useState(false);
+  const [textoStock, setTextoStock] = useState('');
+  const [guardandoStock, setGuardandoStock] = useState(false);
 
   useEffect(() => {
     async function cargarDetalle() {
@@ -68,6 +70,7 @@ export default function DetalleProductoScreen() {
             modelo,
             descripcion,
             precio,
+            stock_minimo,
             tipos_producto(nombre),
             marcas(nombre),
             unidades_medida(nombre)
@@ -116,6 +119,7 @@ export default function DetalleProductoScreen() {
           existencias: Number(stock?.total ?? 0),
           precio: data.precio === null ? null : Number(data.precio),
         });
+        setTextoStock(String(data.stock_minimo ?? 0));
 
         const session = await obtenerSesion();
         if (session) {
@@ -149,6 +153,56 @@ export default function DetalleProductoScreen() {
 
     setProducto((p) => (p ? { ...p, precio: r.valor } : p));
     setEditando(false);
+  }
+
+  async function guardarStock() {
+    const n = Number(textoStock.trim().replace(',', '.'));
+    if (textoStock.trim() === '' || !Number.isFinite(n) || n < 0) {
+      Alert.alert('Aviso', 'Ingresa un número mayor o igual a 0.');
+      return;
+    }
+
+    setGuardandoStock(true);
+    const { data, error: errorStock } = await supabase
+      .from('productos')
+      .update({ stock_minimo: n })
+      .eq('id', id)
+      .select('id');
+    setGuardandoStock(false);
+
+    if (errorStock || !data || data.length === 0) {
+      Alert.alert('Error', 'No se pudo guardar. Verifica que tengas permiso.');
+      return;
+    }
+    Alert.alert('Listo', 'Stock mínimo actualizado.');
+  }
+
+  function desactivar() {
+    if (!producto) return;
+    const aviso =
+      producto.existencias > 0
+        ? `Aún hay ${producto.existencias} ${producto.unidad} en existencia. ¿Desactivarlo de todos modos?`
+        : 'El producto dejará de aparecer en las listas.';
+
+    Alert.alert('Desactivar producto', aviso, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Desactivar',
+        style: 'destructive',
+        onPress: async () => {
+          const { data, error: errorActivo } = await supabase
+            .from('productos')
+            .update({ activo: false })
+            .eq('id', id)
+            .select('id');
+          if (errorActivo || !data || data.length === 0) {
+            Alert.alert('Error', 'No se pudo desactivar. Verifica que tengas permiso.');
+            return;
+          }
+          router.back();
+        },
+      },
+    ]);
   }
 
   return (
@@ -295,6 +349,30 @@ export default function DetalleProductoScreen() {
                   </>
                 )}
               </ThemedCard>
+
+              {puedeEditar && (
+                <ThemedCard style={{ gap: 12 }}>
+                  <ThemedText style={{ fontWeight: 'bold' }}>Administrar producto</ThemedText>
+                  <ThemedText type="suave">
+                    Stock mínimo: se marca como existencias bajas cuando hay menos de este número.
+                  </ThemedText>
+                  <ThemedInput
+                    value={textoStock}
+                    onChangeText={setTextoStock}
+                    keyboardType="decimal-pad"
+                  />
+                  <ThemedButton
+                    titulo="Guardar stock mínimo"
+                    onPress={guardarStock}
+                    cargando={guardandoStock}
+                  />
+                  <TouchableOpacity onPress={desactivar}>
+                    <ThemedText style={{ color: colors.error, fontWeight: 'bold' }}>
+                      Desactivar producto
+                    </ThemedText>
+                  </TouchableOpacity>
+                </ThemedCard>
+              )}
             </>
           )}
         </ScrollView>

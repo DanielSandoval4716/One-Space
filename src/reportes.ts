@@ -1,11 +1,13 @@
 import { ETIQUETA_TIPO, formatearFechaHora, nombreProducto, obtenerMovimientos } from "@/movimientos";
 import { obtenerProductosOpcion } from "@/opcionesInventario";
+import { formatearPrecio } from "@/precios";
 import { supabase } from "@/supabase";
 
 // Cada reporte devuelve una lista de líneas de texto.
 export const REPORTES: { id: string; titulo: string; generar: () => Promise<string[]> }[] = [
   { id: "existencias", titulo: "Existencias", generar: existencias },
   { id: "bajas", titulo: "Existencias bajas", generar: bajas },
+  { id: "valor", titulo: "Valor del inventario", generar: valorInventario },
   { id: "movimientos", titulo: "Movimientos (30 días)", generar: movimientos30 },
   { id: "usuarios", titulo: "Operaciones por usuario (30 días)", generar: porUsuario },
 ];
@@ -52,4 +54,30 @@ async function porUsuario() {
     conteo.set(nombre, (conteo.get(nombre) ?? 0) + 1);
   }
   return [...conteo.entries()].sort((a, b) => b[1] - a[1]).map(([nombre, n]) => `${nombre}: ${n} operación(es)`);
+}
+
+async function valorInventario() {
+  const [{ data }, productos] = await Promise.all([
+    supabase.from("productos").select("id, precio").eq("activo", true),
+    obtenerProductosOpcion(),
+  ]);
+  const precios = new Map((data ?? []).map((p: any) => [p.id, p.precio === null ? null : Number(p.precio)]));
+
+  let total = 0;
+  let sinPrecio = 0;
+  const lineas: string[] = [];
+  for (const p of productos) {
+    const precio = precios.get(p.id);
+    if (precio === null || precio === undefined) {
+      if (p.total > 0) sinPrecio++;
+      continue;
+    }
+    const valor = precio * p.total;
+    total += valor;
+    lineas.push(`${p.nombre} · ${p.total} × ${formatearPrecio(precio)} = ${formatearPrecio(valor)}`);
+  }
+
+  const resumen = [`Valor total: ${formatearPrecio(total)}`];
+  if (sinPrecio > 0) resumen.push(`${sinPrecio} producto(s) con existencias no tienen precio y no se cuentan.`);
+  return [...resumen, "", ...lineas];
 }

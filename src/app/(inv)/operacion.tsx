@@ -19,7 +19,6 @@ import { CambioExistencia } from '@/components/inventario/CambioExistencia';
 import { Opciones } from '@/components/inventario/Opciones';
 import { Seccion } from '@/components/inventario/Seccion';
 import { SelectorProducto } from '@/components/inventario/SelectorProducto';
-import { convertirReserva, reservadoDe } from '@/data/reservasPrueba';
 import {
   MotivoOpcion,
   PersonaOpcion,
@@ -49,47 +48,20 @@ import { useTheme } from '@/theme';
 // "Sin proveedor" es una opción más de la lista; se guarda como "ningún proveedor".
 const SIN_PROVEEDOR = 0;
 
-// Datos que llegan cuando una salida viene de "Convertir en salida" (pantalla Reservas).
-type DatosIniciales = {
-  productoId?: string;
-  cantidad?: string;
-  reservaId?: number;
-  responsable?: string; // nombre de la persona
-  nota?: string;
-};
-
 export default function Operacion() {
-  const params = useLocalSearchParams<{
-    tipo?: string;
-    productoId?: string;
-    cantidad?: string;
-    reservaId?: string;
-    responsable?: string;
-    nota?: string;
-  }>();
+  const params = useLocalSearchParams<{ tipo?: string }>();
 
   if (!esTipoOperacion(params.tipo)) return <MensajeCentrado texto="Operación no válida." />;
 
-  const inicial: DatosIniciales = {
-    productoId: params.productoId,
-    cantidad: params.cantidad,
-    reservaId: params.reservaId ? Number(params.reservaId) : undefined,
-    responsable: params.responsable,
-    nota: params.nota,
-  };
-  return <FormularioOperacion tipo={params.tipo} inicial={inicial} />;
+  return <FormularioOperacion tipo={params.tipo} />;
 }
 
-function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: DatosIniciales }) {
+function FormularioOperacion({ tipo }: { tipo: TipoOperacion }) {
   const router = useRouter();
   const colors = useTheme();
   const cfg = CONFIG_OPERACION[tipo];
   const usaOrigen = cfg.etiquetaOrigen !== null;
   const usaDestino = cfg.etiquetaDestino !== null;
-
-  // Si es una salida que convierte una reserva, el producto y la cantidad vienen fijos.
-  const reservaId = tipo === 'salida' ? inicial.reservaId : undefined;
-  const desdeReserva = reservaId !== undefined;
 
   // --- Datos que vienen de la base de datos ---
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -105,7 +77,7 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
   const [producto, setProducto] = useState<ProductoOpcion | null>(null);
   const [origenId, setOrigenId] = useState<number | null>(null);
   const [destinoId, setDestinoId] = useState<number | null>(null);
-  const [cantidadTexto, setCantidadTexto] = useState(desdeReserva ? (inicial.cantidad ?? '') : '');
+  const [cantidadTexto, setCantidadTexto] = useState('');
   const [motivoId, setMotivoId] = useState<number | null>(null);
   const [proveedorId, setProveedorId] = useState<number | null>(null);
   const [personaId, setPersonaId] = useState<number | null>(null);
@@ -145,11 +117,6 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
       setProveedores(prov);
       setPersonas(pers);
 
-      if (desdeReserva) {
-        const personasCargadas: PersonaOpcion[] = pers;
-        setProducto(prod.find((p) => p.id === inicial.productoId) ?? null);
-        setPersonaId(personasCargadas.find((p) => p.nombre === inicial.responsable)?.id ?? null);
-      }
       setCargando(false);
     }
     cargar();
@@ -187,7 +154,7 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
   const cantidad = leerCantidad(cantidadTexto);
   const unidad = producto?.unidad ?? '';
   // Lo reservado por otras operaciones no se puede sacar (la reserva que se convierte sí).
-  const reservadoPorOtros = tipo === 'salida' && producto ? reservadoDe(producto.id, reservaId) : 0;
+  const reservadoPorOtros = tipo === 'salida' && producto ? producto.reservado : 0;
   const disponibleSinReservas = tipo === 'salida' && producto ? producto.total - reservadoPorOtros : null;
   const opcionesUbicacion = ubicaciones.map((u) => ({ valor: u.id, titulo: `${u.bodega} › ${u.nombre}` }));
 
@@ -242,9 +209,7 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
       setError(`No se pudo registrar: ${resultado.error ?? 'revisa que tengas permiso.'}`);
       return;
     }
-    if (reservaId !== undefined) convertirReserva(reservaId);
-    const mensaje = desdeReserva ? 'Salida registrada y reserva convertida.' : cfg.exito;
-    Alert.alert(cfg.nombre, mensaje, [{ text: 'OK', onPress: () => router.back() }]);
+    Alert.alert(cfg.nombre, cfg.exito, [{ text: 'OK', onPress: () => router.back() }]);
   }
 
   if (!cargando && perfil && !puedeVer(perfil, [cfg.permiso])) {
@@ -262,28 +227,12 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
           <ThemedText type="titulo">{cfg.titulo}</ThemedText>
           <ThemedText type="suave">{cfg.subtitulo}</ThemedText>
 
-          {desdeReserva && (
-            <ThemedText style={{ color: colors.aviso }}>
-              Esta salida convierte una reserva: se sacan las unidades que estaban apartadas.
-            </ThemedText>
-          )}
-
           {cargando && <ThemedText type="suave">Cargando...</ThemedText>}
 
           {!cargando && (
             <>
               <Seccion titulo="Producto">
-                {desdeReserva ? (
-                  producto ? (
-                    <ThemedText>
-                      {producto.nombre} · existencia total: {producto.total} {producto.unidad}
-                    </ThemedText>
-                  ) : (
-                    <ThemedText type="error">El producto de la reserva ya no está disponible.</ThemedText>
-                  )
-                ) : (
-                  <SelectorProducto productos={productos} seleccionado={producto} onSelect={elegirProducto} />
-                )}
+                <SelectorProducto productos={productos} seleccionado={producto} onSelect={elegirProducto} />
                 {producto && reservadoPorOtros > 0 && (
                   <ThemedText type="suave">
                     Hay {reservadoPorOtros} {unidad} reservadas; disponibles para sacar:{' '}
@@ -322,7 +271,6 @@ function FormularioOperacion({ tipo, inicial }: { tipo: TipoOperacion; inicial: 
                   value={cantidadTexto}
                   onChangeText={setCantidadTexto}
                   keyboardType="decimal-pad"
-                  editable={!desdeReserva}
                 />
               </Seccion>
 

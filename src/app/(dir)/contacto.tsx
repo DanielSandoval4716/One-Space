@@ -1,3 +1,5 @@
+import { SinPermiso } from '@/components/SinPermiso';
+import { usePermiso } from '@/permisos';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardTypeOptions, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
@@ -43,6 +45,7 @@ const CAMPOS: Record<TipoContacto, Campo[]> = {
 };
 
 export default function ContactoScreen() {
+  const permitido = usePermiso(['proveedores.gestionar', 'personas.gestionar']);
   const router = useRouter();
   const colors = useTheme();
   const params = useLocalSearchParams<{ tipo?: string; id?: string }>();
@@ -150,6 +153,8 @@ export default function ContactoScreen() {
 
   const nombreTipo = esProveedor ? 'proveedor' : 'persona';
   const titulo = esNuevo ? `Nuevo ${nombreTipo}` : editando ? `Editar ${nombreTipo}` : `Detalle del ${nombreTipo}`;
+
+  if (permitido !== true) return <SinPermiso cargando={permitido === null} />;
 
   return (
     <ThemedView style={{ flex: 1 }}>

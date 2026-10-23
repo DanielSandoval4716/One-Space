@@ -2,8 +2,17 @@ import { Pressable, View } from 'react-native';
 
 import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedText } from '@/components/ThemedText';
-import { Producto } from '@/data/productosPrueba';
 import { useTheme } from '@/theme';
+
+export type Producto = {
+  id: string;
+  tipo: string;
+  marca: string;
+  modelo: string;
+  descripcion: string;
+  unidad: string;
+  existencias: number;
+};
 
 type Props = {
   producto: Producto;
