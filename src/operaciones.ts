@@ -119,6 +119,8 @@ export type EstadoFormulario = {
   motivoId: number | null;
   personaId: number | null;
   existenciaOrigen: number | null; // cantidad registrada en el origen (null si no se ha leído)
+  // Solo salidas: existencia total del producto menos lo reservado por otras operaciones.
+  disponibleSinReservas?: number | null;
 };
 
 // Devuelve el mensaje del primer problema que encuentre, o null si todo está bien.
@@ -140,6 +142,10 @@ export function validarOperacion(tipo: TipoOperacion, e: EstadoFormulario): stri
 
   if (tipo !== "entrada" && e.existenciaOrigen !== null && e.cantidad > e.existenciaOrigen) {
     return `No hay suficiente existencia en esa ubicación (disponible: ${e.existenciaOrigen}).`;
+  }
+
+  if (tipo === "salida" && e.disponibleSinReservas != null && e.cantidad > e.disponibleSinReservas) {
+    return `Solo hay ${e.disponibleSinReservas} disponibles; el resto está reservado.`;
   }
 
   if (tipo === "salida" && e.personaId === null) {

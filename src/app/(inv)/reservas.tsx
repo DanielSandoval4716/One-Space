@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import {  useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -195,7 +195,11 @@ export default function Reservas() {
 
               {r.estado === 'activa' && puedeReservar && convirtiendo !== r.id && (
                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
+<<<<<<< HEAD
+                  <TouchableOpacity onPress={() => convertirEnSalida(r)}>
+=======
                   <TouchableOpacity onPress={() => abrirConversion(r)}>
+>>>>>>> main
                     <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>Convertir en salida</ThemedText>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => cancelar(r)}>
