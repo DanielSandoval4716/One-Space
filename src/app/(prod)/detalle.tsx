@@ -237,7 +237,11 @@ export default function DetalleProductoScreen() {
                 Detalle del producto
               </ThemedText>
 
-              <FotoYQR productoId={producto.id} />
+              <FotoYQR
+                productoId={producto.id}
+                nombre={`${producto.marca} ${producto.modelo}`.trim()}
+                detalle={producto.tipo}
+              />
 
               <ThemedCard style={{ gap: 12 }}>
                 <ThemedText
