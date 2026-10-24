@@ -69,7 +69,6 @@ return (
         <ThemedText style={subtitulo}>Seguridad</ThemedText>
         <Acceso titulo="Roles y permisos" onPress={() => router.push('/roles')} />
         <Acceso titulo="Usuarios" onPress={() => router.push('/usuarios')} />
-
       </ScrollView>
     </SafeAreaView>
   </ThemedView>

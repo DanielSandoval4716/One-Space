@@ -1,10 +1,13 @@
+import { analisisEstadistico, elasticidades } from "@/analisis";
 import { obtenerExistencias } from "@/existencias";
 import { formatearPrecio } from "@/precios";
 import { supabase } from "@/supabase";
 
-const URL_API = "https://api.deepseek.com/chat/completions";
-const API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_KEY!;
-const MODELO = "deepseek-chat";
+// Gemini (modelo gratuito). Si Google lo cambia, solo hay que modificar MODELO.
+const MODELO = "gemini-3.1-flash-lite";
+const URL_API = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`;
+// Se limpian espacios y comillas por si quedaron en el archivo .env.
+const API_KEY = (process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? "").trim().replace(/^["']|["']$/g, "");
 
 const MAX_MOVIMIENTOS = 1000;
 const MAX_DETALLE = 150;
@@ -32,7 +35,7 @@ function clasificar(m: Fila) {
 export async function construirContexto(dias: number): Promise<string> {
   const desde = new Date(Date.now() - dias * 86400000).toISOString();
 
-  const [existencias, precios, movs, reservas, pendientes] = await Promise.all([
+  const [existencias, precios, movs, reservas, pendientes, historial] = await Promise.all([
     obtenerExistencias(),
     supabase.from("productos").select("id, precio").eq("activo", true),
     supabase
@@ -52,6 +55,11 @@ export async function construirContexto(dias: number): Promise<string> {
       .from("solicitudes_ajuste")
       .select("*", { count: "exact", head: true })
       .eq("estado", "pendiente"),
+    // Historial de cambios de precio (para la elasticidad). Si la tabla no existe, devuelve error.
+    supabase
+      .from("historial_precios")
+      .select("producto_id, precio, cambiado_en")
+      .order("cambiado_en", { ascending: true }),
   ]);
 
   const precio = new Map<string, number>();
@@ -148,6 +156,27 @@ export async function construirContexto(dias: number): Promise<string> {
       `- ${r.cantidad} x ${r.productos?.marcas?.nombre ?? ""} ${r.productos?.modelo ?? ""} (${r.motivo})`,
   );
 
+  // Análisis estadístico y económico: se calcula aquí, la IA solo lo interpreta.
+  const MS_DIA = 86400000;
+  const truncado = filas.length >= MAX_MOVIMIENTOS;
+  const diasAnalisis = truncado
+    ? Math.max(1, Math.ceil((Date.now() - new Date(filas[filas.length - 1].fecha).getTime()) / MS_DIA))
+    : dias;
+  const nombres = new Map((existencias ?? []).map((p) => [p.id, p.nombre]));
+  const stock = new Map((existencias ?? []).map((p) => [p.id, p.total]));
+  const movsAnalisis = filas.map((m) => ({
+    fecha: m.fecha,
+    tipo: m.tipo,
+    cantidad: Number(m.cantidad),
+    producto_id: m.producto_id,
+  }));
+  const historialPrecios = historial.error ? null : ((historial.data ?? []) as any[]);
+  const bloqueEstadistico = analisisEstadistico(movsAnalisis, nombres, precio, stock, diasAnalisis, formatearPrecio);
+  const bloqueElasticidad = elasticidades(movsAnalisis, historialPrecios, nombres, diasAnalisis, formatearPrecio);
+  const avisoTruncado = truncado
+    ? [`AVISO: hay más de ${MAX_MOVIMIENTOS} movimientos; el análisis cubre solo los últimos ${diasAnalisis} días.`]
+    : [];
+
   return [
     `INVENTARIO ACTUAL (${lineasProductos.length} productos). Valor total aprox. ${formatearPrecio(valorTotal)}` +
       (sinPrecio
@@ -173,6 +202,11 @@ export async function construirContexto(dias: number): Promise<string> {
     `RESERVAS ACTIVAS (${lineasReservas.length}):`,
     lineasReservas.join("\n") || "(ninguna)",
     `AJUSTES PENDIENTES DE AUTORIZACIÓN: ${pendientes.count ?? 0}`,
+    "",
+    ...avisoTruncado,
+    ...bloqueEstadistico,
+    "",
+    ...bloqueElasticidad,
   ].join("\n");
 }
 
@@ -183,24 +217,43 @@ export async function preguntar(
   const sistema =
     `Eres el asistente de un sistema de inventario. Hoy es ${new Date().toLocaleDateString("es-GT")}. ` +
     `Responde en español, breve y claro, usando SOLO los datos de abajo. ` +
-    `Usa los totales ya calculados; no recalcules sumas largas. ` +
+    `Usa los totales ya calculados; no recalcules sumas largas. Las secciones ANÁLISIS ESTADÍSTICO y ELASTICIDAD ya vienen calculadas por la aplicación: úsalas tal cual. ` +
     `Si el dato no está o el periodo no lo cubre, dilo; no inventes cifras. ` +
     `Los montos están en quetzales (Q).\n\n${contexto}`;
 
-  const res = await fetch(URL_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODELO,
-      temperature: 0.3,
-      messages: [{ role: "system", content: sistema }, ...historial.slice(-10)],
-    }),
-  });
+  if (!API_KEY) {
+    throw new Error("falta EXPO_PUBLIC_GEMINI_API_KEY en el archivo .env");
+  }
 
-  if (!res.ok) throw new Error(`Error ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${URL_API}?key=${encodeURIComponent(API_KEY)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sistema }] },
+        contents: historial.slice(-10).map((m) => ({
+          role: m.role === "user" ? "user" : "model",
+          parts: [{ text: m.content }],
+        })),
+      }),
+    });
+  } catch {
+    throw new Error("sin conexión con Gemini");
+  }
+
+  if (!res.ok) {
+    let motivo = "";
+    try {
+      motivo = String((await res.json())?.error?.message ?? "").slice(0, 150);
+    } catch {}
+    throw new Error(`Error ${res.status}${motivo ? ": " + motivo : ""}`);
+  }
+
   const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "Sin respuesta.";
+  const texto = ((json.candidates?.[0]?.content?.parts ?? []) as { text?: string }[])
+    .map((p) => p.text ?? "")
+    .join("")
+    .trim();
+  return texto || "Sin respuesta.";
 }

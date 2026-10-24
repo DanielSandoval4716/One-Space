@@ -26,6 +26,11 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon md="home" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="asistente">
+        <NativeTabs.Trigger.Label>Asistente</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon md="chat" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="configuracion" hidden={!puedeConfigurar}>
         <NativeTabs.Trigger.Label>Configuración</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon md="settings" />

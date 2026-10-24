@@ -62,6 +62,20 @@ export default function Asistente() {
             >
               <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>Generar resumen →</ThemedText>
             </TouchableOpacity>
+            <ThemedButton
+              titulo="Realizar análisis"
+              cargando={cargando}
+              onPress={() =>
+                enviar(
+                  `Realiza un análisis estadístico y económico del inventario de ${etiquetaPeriodo === 'hoy' ? 'hoy' : `los últimos ${periodo} días`}. ` +
+                    'Usa solo las cifras ya calculadas en ANÁLISIS ESTADÍSTICO y ELASTICIDAD, sin recalcular. Estructura la respuesta en: ' +
+                    '1) Estadístico: variabilidad de la demanda (varianza, desviación y CV) de los productos principales, productos con demanda errática, tendencia y clasificación ABC. ' +
+                    '2) Económico: valor del inventario y su concentración, rotación y cobertura, y elasticidad e ingreso marginal si hubo cambios de precio (si no los hubo, dilo sin inventar). ' +
+                    '3) Recomendaciones: máximo 3, incluyendo puntos de reorden. ' +
+                    'Menciona brevemente los supuestos y límites de los datos.'
+                )
+              }
+            />
           </View>
 
           <FlatList
