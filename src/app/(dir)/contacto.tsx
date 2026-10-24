@@ -183,36 +183,6 @@ export default function ContactoScreen() {
                 ))}
               </ThemedCard>
 
-              {!esProveedor && (
-                <ThemedCard style={{ gap: 12 }}>
-                  <ThemedText style={{ fontWeight: 'bold' }}>Responsabilidades</ThemedText>
-                  <ThemedText type="suave">Se administran en Configuración.</ThemedText>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {catalogo.map((rol) => {
-                      const activo = roles.includes(rol.id);
-                      return (
-                        <Pressable
-                          key={rol.id}
-                          onPress={() => alternarRol(rol.id)}
-                          style={{
-                            paddingVertical: 8,
-                            paddingHorizontal: 12,
-                            borderRadius: 20,
-                            borderWidth: 1,
-                            borderColor: activo ? colors.primario : colors.borde,
-                            backgroundColor: activo ? colors.primario : colors.tarjeta,
-                          }}
-                        >
-                          <ThemedText style={{ fontSize: 14, color: activo ? colors.textoSobrePrimario : colors.texto }}>
-                            {rol.nombre}
-                          </ThemedText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </ThemedCard>
-              )}
-
               <ThemedButton titulo="Guardar" onPress={guardar} cargando={guardando} />
               <TouchableOpacity onPress={cancelarEdicion} style={{ alignItems: 'center', padding: 8 }}>
                 <ThemedText style={{ color: colors.primario, fontWeight: 'bold' }}>Cancelar</ThemedText>
