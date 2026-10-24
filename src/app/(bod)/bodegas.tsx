@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/ThemedView';
@@ -8,7 +8,8 @@ import { ThemedCard } from '@/components/ThemedCard';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedButton } from '@/components/ThemedButton';
 import { obtenerSesion } from '@/auth';
-import { Bodega, Ubicacion, obtenerBodegas, crearBodega, obtenerUbicaciones, crearUbicacion, obtenerExistenciasDeBodega } from '@/bodegas';
+import { usePermiso } from '@/permisos';
+import { Bodega, Ubicacion, obtenerBodegas, crearBodega, obtenerUbicaciones, crearUbicacion, obtenerExistenciasDeBodega, editarBodega, eliminarBodega } from '@/bodegas';
 
 export default function Bodegas() {
   const router = useRouter();
@@ -21,6 +22,13 @@ export default function Bodegas() {
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  // Edición de la bodega abierta (solo con permiso de configuración)
+  const puedeAdministrar = usePermiso(['configuracion.gestionar']) === true;
+  const [nombreEdit, setNombreEdit] = useState('');
+  const [descEdit, setDescEdit] = useState('');
+  const [errorEdit, setErrorEdit] = useState('');
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
+
   async function abrir(b: Bodega | null) {
     const datos = b ? await obtenerUbicaciones(b.id) : await obtenerBodegas();
     setBodega(b);
@@ -29,6 +37,9 @@ export default function Bodegas() {
     setNombre('');
     setDescripcion('');
     setError('');
+    setNombreEdit(b?.nombre ?? '');
+    setDescEdit(b?.descripcion ?? '');
+    setErrorEdit('');
   }
 
   useEffect(() => {
@@ -55,6 +66,50 @@ export default function Bodegas() {
     else abrir(bodega);
   }
 
+  async function guardarCambios() {
+    if (!bodega) return;
+    if (nombreEdit.trim() === '') {
+      setErrorEdit('Escribe un nombre.');
+      return;
+    }
+
+    setErrorEdit('');
+    setGuardandoEdit(true);
+    const ok = await editarBodega(bodega.id, nombreEdit, descEdit, bodega.nombre);
+    setGuardandoEdit(false);
+
+    if (!ok) {
+      setErrorEdit('No se pudo guardar. Revisa que tengas permiso.');
+      return;
+    }
+    setBodega({ ...bodega, nombre: nombreEdit.trim(), descripcion: descEdit.trim() || null });
+    Alert.alert('Listo', 'Bodega actualizada.');
+  }
+
+  function confirmarEliminar() {
+    if (!bodega) return;
+    const n = lista.length;
+    Alert.alert(
+      'Eliminar bodega',
+      `¿Eliminar "${bodega.nombre}"${n > 0 ? ` y sus ${n} ubicación(es)` : ''}? Esta acción no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const r = await eliminarBodega(bodega.id, bodega.nombre);
+            if (!r.ok) {
+              Alert.alert('No se pudo eliminar', r.mensaje);
+              return;
+            }
+            abrir(null);
+          },
+        },
+      ]
+    );
+  }
+
   return (
     <ThemedView style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -73,6 +128,19 @@ export default function Bodegas() {
             {error !== '' && <ThemedText type="error">{error}</ThemedText>}
             <ThemedButton titulo="Guardar" onPress={guardar} cargando={guardando} />
           </ThemedCard>
+
+          {bodega && puedeAdministrar && (
+            <ThemedCard style={{ gap: 12 }}>
+              <ThemedText>Administrar bodega</ThemedText>
+              <ThemedInput placeholder="Nombre" value={nombreEdit} onChangeText={setNombreEdit} />
+              <ThemedInput placeholder="Descripción (opcional)" value={descEdit} onChangeText={setDescEdit} />
+              {errorEdit !== '' && <ThemedText type="error">{errorEdit}</ThemedText>}
+              <ThemedButton titulo="Guardar cambios" onPress={guardarCambios} cargando={guardandoEdit} />
+              <TouchableOpacity onPress={confirmarEliminar}>
+                <ThemedText type="error">Eliminar bodega</ThemedText>
+              </TouchableOpacity>
+            </ThemedCard>
+          )}
 
           {lista.length === 0 && <ThemedText type="suave">Aún no hay {bodega ? 'ubicaciones' : 'bodegas'}.</ThemedText>}
           {lista.map((item) => (

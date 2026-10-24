@@ -41,6 +41,12 @@
     },
     "platforms": [
       "android"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "58813f74-31b1-420a-8fdd-32893542ed9d"
+      }
+    }
   }
 }
